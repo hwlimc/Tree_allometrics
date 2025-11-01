@@ -1,0 +1,38 @@
+```{r}
+```
+---
+title: BEF korea
+---
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see .
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+```{r}
+source('/Users/hyli0001/Documents/Rwork/functions.R')
+setwd('/Users/hyli0001/Documents/Korea/KR_Biomass/Rwork')
+bm<-read.table("tree_harv.txt",header=TRUE)
+colnames(bm)<-c('ext_no','sp','plot','no','age','d','h','Bst','Bbr','Bf','Bcr','wd','Vst','Vst.5')
+bm$ba<-(bm$d/2)^2*pi
+bm$bef1<-(bm$Bst+bm$Bbr+bm$Bf)/bm$Bst
+bm$bef2<-(bm$Bst+bm$Bbr+bm$Bf+bm$Bcr)/bm$Bst
+bm$bef3<-(bm$Bst+bm$Bbr+bm$Bf+bm$Bcr)/bm$Vst
+
+bmpd<-bm[bm$sp=='PD',]
+
+si1<-read.table("site_info_1.txt",header=TRUE)
+si2<-read.table("site_info_2.txt",header=TRUE)
+
+si1$ba<-(si1$dbh/200)^2*pi
+sim1<-summaryBy(ba+h~ext_no+plot_size,si1,FUN=md)
+sim2<-summaryBy(ba~ext_no+plot_size,si1,FUN=n)
+sim2$std<-sim2$ba.n/sim2$plot_size
+sim<-merge(merge(sim1,si2,by='ext_no'),sim2[,c('ext_no','std')],by='ext_no')
+sim$rsd<-((sim$std/2.4711)*(sqrt(sim$ba.m/pi)*2*100/25.4)^1.605)/400
+bms<-merge(sim,bm,by=c('ext_no'))
+par(mfrow=c(1,2))
+plot(bef2~rsd,bms,bg=2,pch=21)
+points(bef1~rsd,bms)
+plot(bef2~age,bms,ylim=c(1,2.35),bg=2,pch=21)
+points(bef1~age,bms,ylim=c(1,2.35))
+```
+# rmarkdown::render("KRbiomass_BEF.rmd",output="sample.html")

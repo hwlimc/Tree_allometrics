@@ -1,0 +1,156 @@
+source('/Users/hyli0001/Documents/Rwork/functions.R')#
+setwd('/Users/hyli0001/Desktop/1477 Revision juni 2025 alla avd')#
+pr1<-read.table("1477 stamrakning avd 1.txt",head=TRUE,sep='\t')#
+pr2<-read.table("1477 stamrakning avd 2.txt",head=TRUE,sep='\t')#
+pr3<-read.table("1477 stamrakning avd 3.txt",head=TRUE,sep='\t')#
+pr4<-read.table("1477 stamrakning avd 4.txt",head=TRUE,sep='\t')#
+pr5<-read.table("1477 stamrakning avd 5.txt",head=TRUE,sep='\t')#
+pr6<-read.table("1477 stamrakning avd 6.txt",head=TRUE,sep='\t')#
+pr7<-read.table("1477 stamrakning avd 7.txt",head=TRUE,sep='\t')#
+pr8<-read.table("1477 stamrakning avd 8.txt",head=TRUE,sep='\t')#
+pr9<-read.table("1477 stamrakning avd 9.txt",head=TRUE,sep='\t')#
+pr10<-read.table("1477 stamrakning avd 10.txt",head=TRUE,sep='\t')#
+pr12<-read.table("1477 stamrakning avd 12.txt",head=TRUE,sep='\t')#
+pr13<-read.table("1477 stamrakning avd 13.txt",head=TRUE,sep='\t')#
+pr14<-read.table("1477 stamrakning avd 14.txt",head=TRUE,sep='\t')#
+pr15<-read.table("1477 stamrakning avd 15.txt",head=TRUE,sep='\t')#
+pr16<-read.table("1477 stamrakning avd 16.txt",head=TRUE,sep='\t')#
+pr17<-read.table("1477 stamrakning avd 17.txt",head=TRUE,sep='\t')#
+pr21<-read.table("1477 stamrakning avd 21.txt",head=TRUE,sep='\t')#
+pr23<-read.table("1477 stamrakning avd 23.txt",head=TRUE,sep='\t')#
+pr27<-read.table("1477 stamrakning avd 27.txt",head=TRUE,sep='\t')#
+pr28<-read.table("1477 stamrakning avd 28.txt",head=TRUE,sep='\t')#
+pr29<-read.table("1477 stamrakning avd 29.txt",head=TRUE,sep='\t')#
+pr31<-read.table("1477 stamrakning avd 31.txt",head=TRUE,sep='\t')#
+pr32<-read.table("1477 stamrakning avd 32.txt",head=TRUE,sep='\t')#
+pr33<-read.table("1477 stamrakning avd 33.txt",head=TRUE,sep='\t')#
+pr34<-read.table("1477 stamrakning avd 34.txt",head=TRUE,sep='\t')#
+pr36<-read.table("1477 stamrakning avd 36.txt",head=TRUE,sep='\t')#
+#
+smn<-function(x){c(s=sum(x,na.rm=T),m=mean(x,na.rm=T),n=n(x))}#
+#
+fla<-function(df){#
+	df$d<-mean(df$d1+df$d2)/1000#
+	df$ba<-BA(df$d)#
+	print(snm(df$ba))}#
+df<-NULL#
+pnr<-c(1:10,12:17,21,23,27:29,31:34,36)#
+#
+for (i in pnr){#
+	dfr<-read.table(paste("1477 stamrakning avd ",i,".txt",sep=''),head=TRUE,sep='\t')#
+	df<-rbind(df,dfr)}#
+#
+df$d<-(df$d1+df$d2)/2000#
+df$ba<-BA(df$d)#
+dfm<-summaryBy(ba~avd,df,FUN=smn)#
+dfm$sdi<-SDI(dfm$ba.n*10,revD(dfm$ba.m)*100,1.605)#
+trt.plot<-read.table('/Users/hyli0001/Documents/wd/10_Flakaliden_main/Rwork/treatment_plot.txt',head=TRUE,sep='\t')#
+dfs<-merge(dfm,trt.plot,all.x=TRUE)#
+dfs$d.m<-revD(dfs$ba.m)*100
+setwd('/Users/hyli0001/Documents/wd/Flakaliden_Drought/1477 Revision juni 2025 alla avd')
+pr1<-read.table("1477 stamrakning avd 1.txt",head=TRUE,sep='\t')#
+pr2<-read.table("1477 stamrakning avd 2.txt",head=TRUE,sep='\t')#
+pr3<-read.table("1477 stamrakning avd 3.txt",head=TRUE,sep='\t')#
+pr4<-read.table("1477 stamrakning avd 4.txt",head=TRUE,sep='\t')#
+pr5<-read.table("1477 stamrakning avd 5.txt",head=TRUE,sep='\t')#
+pr6<-read.table("1477 stamrakning avd 6.txt",head=TRUE,sep='\t')#
+pr7<-read.table("1477 stamrakning avd 7.txt",head=TRUE,sep='\t')#
+pr8<-read.table("1477 stamrakning avd 8.txt",head=TRUE,sep='\t')#
+pr9<-read.table("1477 stamrakning avd 9.txt",head=TRUE,sep='\t')#
+pr10<-read.table("1477 stamrakning avd 10.txt",head=TRUE,sep='\t')#
+pr12<-read.table("1477 stamrakning avd 12.txt",head=TRUE,sep='\t')#
+pr13<-read.table("1477 stamrakning avd 13.txt",head=TRUE,sep='\t')#
+pr14<-read.table("1477 stamrakning avd 14.txt",head=TRUE,sep='\t')#
+pr15<-read.table("1477 stamrakning avd 15.txt",head=TRUE,sep='\t')#
+pr16<-read.table("1477 stamrakning avd 16.txt",head=TRUE,sep='\t')#
+pr17<-read.table("1477 stamrakning avd 17.txt",head=TRUE,sep='\t')#
+pr21<-read.table("1477 stamrakning avd 21.txt",head=TRUE,sep='\t')#
+pr23<-read.table("1477 stamrakning avd 23.txt",head=TRUE,sep='\t')#
+pr27<-read.table("1477 stamrakning avd 27.txt",head=TRUE,sep='\t')#
+pr28<-read.table("1477 stamrakning avd 28.txt",head=TRUE,sep='\t')#
+pr29<-read.table("1477 stamrakning avd 29.txt",head=TRUE,sep='\t')#
+pr31<-read.table("1477 stamrakning avd 31.txt",head=TRUE,sep='\t')#
+pr32<-read.table("1477 stamrakning avd 32.txt",head=TRUE,sep='\t')#
+pr33<-read.table("1477 stamrakning avd 33.txt",head=TRUE,sep='\t')#
+pr34<-read.table("1477 stamrakning avd 34.txt",head=TRUE,sep='\t')#
+pr36<-read.table("1477 stamrakning avd 36.txt",head=TRUE,sep='\t')#
+#
+smn<-function(x){c(s=sum(x,na.rm=T),m=mean(x,na.rm=T),n=n(x))}
+fla<-function(df){#
+	df$d<-mean(df$d1+df$d2)/1000#
+	df$ba<-BA(df$d)#
+	print(snm(df$ba))}#
+df<-NULL#
+pnr<-c(1:10,12:17,21,23,27:29,31:34,36)#
+#
+for (i in pnr){#
+	dfr<-read.table(paste("1477 stamrakning avd ",i,".txt",sep=''),head=TRUE,sep='\t')#
+	df<-rbind(df,dfr)}#
+#
+df$d<-(df$d1+df$d2)/2000#
+df$ba<-BA(df$d)#
+dfm<-summaryBy(ba~avd,df,FUN=smn)#
+dfm$sdi<-SDI(dfm$ba.n*10,revD(dfm$ba.m)*100,1.605)#
+trt.plot<-read.table('/Users/hyli0001/Documents/wd/10_Flakaliden_main/Rwork/treatment_plot.txt',head=TRUE,sep='\t')#
+dfs<-merge(dfm,trt.plot,all.x=TRUE)#
+dfs$d.m<-revD(dfs$ba.m)*100
+par(mfrow=c(2,2))#
+boxplot(ba.s*10~parcell,dfs[dfs$parcell%in%c('4A','6A','10A','14A','16A','14B'),],ylim=c(10,60),ylab='Basal area (m2 ha-1)')#
+boxplot(d.m~parcell,dfs[dfs$parcell%in%c('4A','6A','10A','14A','16A','14B'),],ylim=c(10,30),ylab='average diameter (cm)')#
+boxplot(ba.n*10~parcell,dfs[dfs$parcell%in%c('4A','6A','10A','14A','16A','14B'),],ylim=c(1200,2500),ylab='Stand density (tree ha-1)')#
+boxplot(sdi~parcell,dfs[dfs$parcell%in%c('4A','6A','10A','14A','16A','14B'),],ylim=c(180,450),ylab='Stand density index')
+source('/Users/hyli0001/Documents/Rwork/functions.R')
+setwd('/Users/hyli0001/Documents/Korea/KR_Biomass/Rwork')
+source('/Users/hyli0001/Documents/Rwork/functions.R')
+setwd('/Users/hyli0001/Documents/Korea/KR_biomass/Rwork')
+setwd('/Users/hyli0001/Documents/wd/12_Allometrics/Rwork')
+bm<-read.table("tree_harv.txt",header=TRUE)#
+colnames(bm)<-c('ext_no','sp','plot','no','age','d','h','Bst','Bbr','Bf','Bcr','wd','Vst','Vst.5')#
+bm$ba<-(bm$d/2)^2*pi#
+bm$bef1<-(bm$Bst+bm$Bbr+bm$Bf)/bm$Bst#
+bm$bef2<-(bm$Bst+bm$Bbr+bm$Bf+bm$Bcr)/bm$Bst#
+bm$bef3<-(bm$Bst+bm$Bbr+bm$Bf+bm$Bcr)/bm$Vst
+si1<-read.table("site_info_1.txt",header=TRUE)#
+si2<-read.table("site_info_2.txt",header=TRUE)#
+sti<-read.table("stand_info.txt",header=TRUE)#
+spk<-unique(sti[,c('sp.k','sp')])#
+spk[order(spk$sp.k),]#
+#
+si1$ba<-(si1$dbh/200)^2*pi#
+sim1<-summaryBy(ba+h~ext_no+plot_size,si1,FUN=md)#
+sim2<-summaryBy(ba~ext_no+plot_size,si1,FUN=n)#
+sim2$std<-sim2$ba.n/sim2$plot_size#
+sim2$sp.kr<-sim2$sp#
+sim2$sp<-NULL#
+sim<-merge(merge(sim1,si2,by='ext_no'),sim2[,c('ext_no','std')],by='ext_no')#
+sim$rsd<-((sim$std/2.4711)*(sqrt(sim$ba.m/pi)*2*100/25.4)^1.605)/400#
+#
+bms<-merge(bm,sim,by=c('ext_no'))#
+unique(bms$sp)#
+length(unique(bms$sp))
+head(bms)#
+quartz()#
+par(mfrow=c(3,6))#
+for(i in 1:18){#
+df<-bms[bms$sp==unique(bms$sp)[i],]#
+plot(bef2~rsd,df,bg=2,pch=21,ylim=c(1,max(df$bef2,na.rm=TRUE)),main=unique(bms$sp)[i])#
+points(bef1~rsd,df)}#
+#
+plot(bef2~rsd,bms[bms$sp=='QAt',],bg=2,pch=21,ylim=c(0,4))#
+points(bef1~rsd,bms[bms$sp=='QAt',])#
+summary(lm(bef2~rsd,bms[bms$sp=='QAt',]))#
+head(bms)#
+#
+plot(res1~rsd,bms[bms$sp=='QAt',],col=plot)#
+head(bms[bms$sp=='QAt',])#
+bms$res1<-NA#
+bms$pre<-NA#
+bms[bms$sp=='QAt',]$res<-residuals(lm(log(Bbr)~log(d)+rsd,bms[bms$sp=='QAt',]))#
+#
+bms[bms$sp=='QAt',]$pre<-exp(predict(lm(log(Bbr)~log(d),bms[bms$sp=='QAt',]),bms[bms$sp=='QAt',]))#
+bms[bms$sp=='QAt',]$res1<-bms[bms$sp=='QAt',]$Bbr-bms[bms$sp=='QAt',]$pre
+par(mfrow=c(3,6))
+for(i in 1:18){
+df<-bms[bms$sp==unique(bms$sp)[i],]
+plot(bef2~rsd,df,bg=2,pch=21,ylim=c(1,max(df$bef2,na.rm=TRUE)),main=unique(bms$sp)[i])
+points(bef1~rsd,df)}
