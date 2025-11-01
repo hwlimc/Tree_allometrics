@@ -1,5 +1,5 @@
-source('/Users/hyli0001/Documents/Rwork/functions.R')
-setwd('/Users/hyli0001/Documents/Korea/KR_Biomass/Rwork')
+source('~/Library/CloudStorage/OneDrive-Sverigeslantbruksuniversitet/wd/Rwork/functions.R')
+
 bm<-read.table("tree_harv.txt",header=TRUE)
 si1<-read.table("site_info_1.txt",header=TRUE)
 si2<-read.table("site_info_2.txt",header=TRUE)
