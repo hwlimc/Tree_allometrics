@@ -17,7 +17,7 @@
 # 해송	PT
 # 현사시	PTl
 
-source('/Users/hyli0001/Library/CloudStorage/OneDrive-Sverigeslantbruksuniversitet/wd/Rwork/functions.R')
+source('functions.R')
 
 bm<-read.table("tree_harv.txt",header=TRUE)
 colnames(bm)<-c('ext_no','sp','plot','no','age','d','h','Bst','Bbr','Bf','Bcr','wd','Vst','Vst.5')
