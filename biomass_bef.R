@@ -48,7 +48,7 @@ unique(bms$sp)
 length(unique(bms$sp))
 
 head(bms)
-quartz()
+
 par(mfrow=c(3,6))
 for(i in 1:18){
 df<-bms[bms$sp==unique(bms$sp)[i],]
