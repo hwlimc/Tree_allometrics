@@ -1,0 +1,16 @@
+##### Static BEF assumptions systematically overestimate carbon sink strength of older forests
+
+### Background
+
+Forest carbon stock and changes are scaled based on equations of tree biomass allometrics. Allometrics reflect specific-ontogenetic development of tree organs, of which weight and volume changes proportionally change with increasing tree dimensions, such as stem diameter and height. In empirical scaling, often used for national carbon accounting, easily obtainable tree dimensions are applied to allometric equations for converting into volume or component biomass; in model simulations, these equations are used to constrain model simulations. 
+
+Trees adjust and adapt to environmental conditions by shifting their shapes in order to optimise resource use and competitive advantages. Allometrics can therefore shift depending on the stand structure. For example, trees in a dense stand often grow in height with narrow crown, while in sparse stand, tree canopy expands widely, exhibiting relatively greater allocation in branches and leaves. Despite this obvious phenomenon, these allometrical shifts associated with stand structure have rarely accounted in regional and national allometric equations, leading to potential biases of national carbon accounting and projection of ecosystem dynamics.
+
+National-scale forest carbon accounting can be made in three ways: species-specific standing volume statistics multiplied by biomass expansion factor, that is the ratio of total biomass to stem volume; sum of estimated individual tree biomass estimated based on each tree's dimensions applied to species-specific allometric equations; and stand mean dimensions applied to equations, multiplied by stand density (the number of trees per unit area). Here we argue that all these three approaches potentially cause biased estimates. First, biomass expansion factors and allometrics can shift as stand structure varies, particularly with between-tree competitions. Second, an application of mean dimensions to the allometric equations leads to biases, because these equations often follow power functions, so summation of the products does not equate with the product of the population mean.
+
+We hypothesis that neglecting variation of biomass expansion factors and allometric equations with stand structure, and individual tree distributions, lead to biased estimates of forest carbon estimations across empirical, statistical, and model simulations. We compile unique datasets on 1041 tree harvests covering 20 major species, as well as corresponding stand structures of 210 stands across South Korea. We develop dynamics biomass expansion factors and allometric equations with easily obtainable stand variables, mean basal area and stand density, for practical applications. The developed equations were applied using national forest inventory and national empirical models, as well as a dynamics vegetation model for bias quantifications.
+
+
+
+
+BEF changes with forest structure, covarying with age classes. BEF of young, less competitive forests tend to have higher, while old sparse forests tends to be lower. Fixed value of BEF can lead to biased estimation of carbon storage and dynamics when projecting forest development over time. 
