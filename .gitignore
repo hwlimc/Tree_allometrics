@@ -56,7 +56,7 @@ Thumbs.db
 # *.csv
 *.tsv
 # *.xlsx
-*.rds
+#*.rds
 *.rdata
 
 ############################
