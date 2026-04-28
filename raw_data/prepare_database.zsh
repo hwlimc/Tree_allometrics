@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-SCRIPT="/Users/hyli0001/Library/CloudStorage/OneDrive-Sverigeslantbruksuniversitet/wrd/b/Dynamic_allometrics/original_files/raw_data/kr_biomass_dataset.R"
+SCRIPT="/Users/hyli0001/Library/CloudStorage/OneDrive-Sverigeslantbruksuniversitet/wrd/b/Dynamic_allometrics/original_files/cleaned_data/kr_biomass_dataset.R"
 LOG="run.log"
 
 echo "Running $SCRIPT..."
