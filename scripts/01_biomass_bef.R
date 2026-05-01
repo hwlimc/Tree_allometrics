@@ -26,7 +26,7 @@ pft_ts$PFT3<-paste(pft_ts$PFT1,pft_ts$PFT2,sep='_')
 
 setdiff(unique(ts$species),unique(pft_ts$species))
 
-
+### By functional types
 split_sp_pft<-split(ts,ts$stand_id)
 divers.metrics<-lapply(split_sp_pft, function(df){
 	multilevel_diversity(
@@ -57,9 +57,7 @@ ts.std$std<-ts.std$n.d/ts.std$plot_size
 ts.std$dist.mmd<-ts.std$med.d-ts.std$m.d
 ts.std$sdi<-SDI(ts.std$std,ts.std$m.d*100,1.605)
 
-
-
-write.table(ts.std,'../processed_data/stand_structure.txt',quote=FALSE,sep='\t')
+write.table(ts.std,'../processed_data/stand_structure.txt',quote=FALSE,sep='\t',row.names=FALSE)
 
 
 
