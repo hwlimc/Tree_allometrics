@@ -3,6 +3,11 @@
 
 getwd()
 source('00_functions.R')
+
+#################################
+######	Loading dataset	 ########
+#################################
+
 raw.tb<-readRDS('../raw_data/rawdata.rds')
 str(raw.tb, max.level=2)
 
@@ -20,10 +25,9 @@ setdiff(unique(bh$sp_code),unique(pft_h$sp_code))
 #################################
 ### Analyzing stand structure ###
 #################################
-ts<-merge(tsr, pft_ts,by='species_kr')
-ts$PFT3<-paste(ts$PFT1,ts$PFT2,sep='_')
-pft_ts$PFT3<-paste(pft_ts$PFT1,pft_ts$PFT2,sep='_')
-
+ts<-merge(tsr,pft_ts,by='species_kr')
+ts$PFTg<-paste(ts$PFT,ts$PFT_grow,sep='_')
+pft_ts$PFTg<-paste(pft_ts$PFT,pft_ts$PFT_grow,sep='_')
 setdiff(unique(ts$species),unique(pft_ts$species))
 
 ### By functional types
@@ -33,18 +37,20 @@ divers.metrics<-lapply(split_sp_pft, function(df){
 		df$species,
 		df$d,
 		pft_ts,
-		trait_group=c("PFT1", "PFT3"))}
-		)
-
+		trait_group=c("PFT", "PFTg",'Family','Genus'))
+		})
 
 unlst<-lapply(divers.metrics, function(x) {
-  c(dom.sp.prop = unlist(x$dominant_prop),
-	species = unlist(x$species_diversity),
-	PFT1 = unlist(x$PFT1_diversity),
-	PFT3 = unlist(x$PFT3_diversity))})
+  c(sp.dom.p = unlist(x$dominant_prop),
+  	ft1 = unlist(x$Forest_type),
+	ft2 = unlist(x$PFT_diversity),
+	ft3 = unlist(x$PFTg_diversity),
+	fml = unlist(x$Family_diversity),
+	gns = unlist(x$Genus_diversity),
+	sp = unlist(x$species_diversity))
+	})
 dvst<-as.data.frame(do.call(rbind,unlst))
-dvst$stand_id<-rownames(dvst) 
-
+dvst$stand_id<-rownames(dvst)
 wb.fit<-lapply(split(ts$d,ts$stand_id),weibull.para)
 wb.para<-as.data.frame(do.call(rbind,wb.fit))
 wb.para$stand_id<-rownames(wb.para)
@@ -58,6 +64,11 @@ ts.std$dist.mmd<-ts.std$med.d-ts.std$m.d
 ts.std$sdi<-SDI(ts.std$std,ts.std$m.d*100,1.605)
 write.table(ts.std,'../processed_data/stand_structure.txt',quote=FALSE,sep='\t',row.names=FALSE)
 
+
+
+#################################
+### Analyzing harvested trees ###
+#################################
 
 pft_h<-raw.tb$data$pft_harvest
 bh<-raw.tb$data$biomass_harvest
