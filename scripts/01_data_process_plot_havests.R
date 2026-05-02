@@ -56,71 +56,43 @@ ts.std$cv<-ts.std$sd.d/ts.std$m.d
 ts.std$std<-ts.std$n.d/ts.std$plot_size
 ts.std$dist.mmd<-ts.std$med.d-ts.std$m.d
 ts.std$sdi<-SDI(ts.std$std,ts.std$m.d*100,1.605)
-
 write.table(ts.std,'../processed_data/stand_structure.txt',quote=FALSE,sep='\t',row.names=FALSE)
 
 
-
+pft_h<-raw.tb$data$pft_harvest
+bh<-raw.tb$data$biomass_harvest
 
 bh$ba<-(bh$d/2)^2*pi
 bh$befa.v<-(bh$Bst+bh$Bbr+bh$Bf)/bh$Vst
 bh$befa.st<-(bh$Bst+bh$Bbr+bh$Bf)/bh$Bst
 bh$beft.v<-(bh$Bst+bh$Bbr+bh$Bf+bh$Bcr)/bh$Vst
 bh$beft.st<-(bh$Bst+bh$Bbr+bh$Bf+bh$Bcr)/bh$Bst
+bh$bwd<-bh$Bst/bh$Vst/1000
 
-plot(Bst~Vst,bh)
-abline(a=0,b=1000)
-plot(wd~d,bh)
-plot(Bbr~d,bh)
-plot(Bst~d,bh)
-plot(Vst~d,bh)
+bh[bh$bwd>1,]
+bh[bh$bwd<0.25,]
+bh[bh$sp_code=='QS',]
+qck<-bh[bh$stand_id%in%c(17,18,46:49,59,62,67,70),]
+bh[bh$stand_id==18&bh$plot==2&bh$no==5,c('d')]<-NA
+bh[bh$stand_id%in%46:49,c('d')]<-NA
+bh[bh$stand_id==59&bh$plot==1&bh$no==3,c('d')]<-NA
+bh[bh$stand_id==62&bh$plot==13&bh$no==4,c('d')]<-NA
+bh[bh$stand_id==67&bh$plot==6&bh$no==5,c('d')]<-NA
+bh[bh$stand_id==70,c('d')]<-NA
+bh[bh$stand_id%in%1024:1025,c('d')]<-NA
 
+bp<-merge(merge(bh[!is.na(bh$d),],pft_h[,c('species','sp_code','PFT','Genus','Family')],all.x=TRUE,by=c('sp_code')),ts.std,all.x=TRUE,by=c('stand_id'))
 
-collap(ts,d+h~stand_id+plot_size,FUN=list(m=fmean,med=fmedian,sd=fsd,n=fnobs))
-
-head(ts.std)
-
-
-
-si1$ba<-(si1$dbh/200)^2*pi
-sim1<-summaryBy(ba+h~ext_no+plot_size,si1,FUN=md)
-
-sim2<-summaryBy(ba~ext_no+plot_size,si1,FUN=n)
-
-sim2$std<-sim2$ba.n/sim2$plot_size
-sim2$sp.kr<-sim2$sp
-sim2$sp<-NULL
-sim<-merge(merge(sim1,si2,by='ext_no'),sim2[,c('ext_no','std')],by='ext_no')
-sim$rsd<-((sim$std/2.4711)*(sqrt(sim$ba.m/pi)*2*100/25.4)^1.605)/400
-
-bms<-merge(bm,sim,by=c('ext_no'))
-unique(bms$sp)
+bp$ba<-(bp$d/2)^2*pi
+bp$befa.v<-(bp$Bst+bp$Bbr+bp$Bf)/bp$Vst
+bp$befa.st<-(bp$Bst+bp$Bbr+bp$Bf)/bp$Bst
+bp$beft.v<-(bp$Bst+bp$Bbr+bp$Bf+bp$Bcr)/bp$Vst
+bp$beft.st<-(bp$Bst+bp$Bbr+bp$Bf+bp$Bcr)/bp$Bst
+bp$bwd<-bp$Bst/bp$Vst/1000
 
 
-length(unique(bms$sp))
-
-head(bms)
-
-par(mfrow=c(3,6))
-for(i in 1:18){
-df<-bms[bms$sp==unique(bms$sp)[i],]
-plot(bef2~rsd,df,bg=2,pch=21,ylim=c(1,max(df$bef2,na.rm=TRUE)),main=unique(bms$sp)[i])
-points(bef1~rsd,df)}
-
-plot(bef2~rsd,bms[bms$sp=='QAt',],bg=2,pch=21,ylim=c(0,4))
-points(bef1~rsd,bms[bms$sp=='QAt',])
-summary(lm(bef2~rsd,bms[bms$sp=='QAt',]))
-head(bms)
-
-plot(res1~rsd,bms[bms$sp=='QAt',],col=plot)
-head(bms[bms$sp=='QAt',])
-bms$res1<-NA
-bms$pre<-NA
-bms[bms$sp=='QAt',]$res<-residuals(lm(log(Bbr)~log(d)+rsd,bms[bms$sp=='QAt',]))
-
-bms[bms$sp=='QAt',]$pre<-exp(predict(lm(log(Bbr)~log(d),bms[bms$sp=='QAt',]),bms[bms$sp=='QAt',]))
-bms[bms$sp=='QAt',]$res1<-bms[bms$sp=='QAt',]$Bbr-bms[bms$sp=='QAt',]$pre
+write.table(bp,'../processed_data/plot_biomass.txt',quote=FALSE,sep='\t',row.names=FALSE)
 
 
-plot(bef2~age,bms,ylim=c(1,2.35),bg=2,pch=21)
-points(bef1~age,bms,ylim=c(1,2.35))
+
+
