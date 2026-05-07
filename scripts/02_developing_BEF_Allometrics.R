@@ -15,75 +15,84 @@ unique(bp$sp_code)
 unique(bp$ft1.forest_type)
 
 
-exp_decay<- function(RSD, L, A, k) {
-  L + A * exp(-k * RSD)
+
+
+exp_decay<- function(x, L, A, k) {
+  L + A * exp(-k * x)
 }
 
-fit_bef <- function(df) {
-  nls(
-    BEF ~ L + A * exp(-k * RSD),
-    data = df,
-    start = list(
-      L = min(df$BEF, na.rm = TRUE),
-      A = max(df$BEF, na.rm = TRUE) - min(df$BEF, na.rm = TRUE),
-      k = 1
-    )
-  )
+mich_men <- function(x,L,A,r0) {
+  L + A / (1 + x/r0)
 }
 
-init_k <- coef(lm(log(BEF) ~ RSD, data = df))[2] * -1
 
-fit <- nls(
-  BEF ~ L + A * exp(-k * RSD),
-  data = df,
-  start = list(
-    L = min(df$BEF),
-    A = diff(range(df$BEF)),
-    k = abs(init_k)
-  )
-)
+library(brms)
+library(cmdstanr)
+fit_bef_joint_bayes <- function(data,
+                                y_1,
+                                y_2,
+                                x,
+                                group,
+                                chains = 4,
+                                iter = 4000,
+                                cores = 4,
+                                adapt_delta = 0.95,
+                                max_treedepth = 12) {
+	df <- data[, c(y_1, y_2, x, group)]
+	names(df) <- c("y1", "y2", "x", "grp")
 
-mich_men <- function(rsd, bef0, amp, r0) {
-  bef0 + amp / (1 + rsd/r0)
+	df <- df[complete.cases(df[, c("x", "grp")]), ]
+	df$grp <- factor(df$grp)
+	med_x <- median(df$x, na.rm = TRUE)
+	prior_r0 <- paste0("lognormal(", log(med_x), ", 1)")
+	
+	bf_y1 <- bf(
+		y1 ~ L + A / (1 + x / r0),
+		L  ~ 1 + (1 | grp),
+		A  ~ 1 + (1 | grp),
+		r0 ~ 1 + (1 | grp),
+		nl = TRUE)
+
+	bf_y2 <- bf(
+		y2 | mi() ~ L + A / (1 + x / r0),
+		L  ~ 1 + (1 | grp),
+		A  ~ 1 + (1 | grp),
+		r0 ~ 1 + (1 | grp),
+		nl = TRUE)
+
+fit <- brm(
+	bf_y1 + bf_y2 + set_rescor(FALSE),
+	data = df,
+	family = gaussian(),
+	prior = c(
+		prior(normal(1.2, 0.5), nlpar = "L",  resp = "y1", lb = 0),
+		prior(normal(0.6, 0.6), nlpar = "A",  resp = "y1", lb = 0),
+		prior_string(prior_r0, nlpar = "r0", resp = "y1", lb = 0),
+
+		prior(normal(1.4, 0.5), nlpar = "L",  resp = "y2", lb = 0),
+		prior(normal(0.7, 0.7), nlpar = "A",  resp = "y2", lb = 0),
+		prior_string(prior_r0, nlpar = "r0", resp = "y2", lb = 0)),
+	chains = chains,
+	iter = iter,
+	cores = cores,
+	control = list(
+		adapt_delta = adapt_delta,
+		max_treedepth = max_treedepth),
+	backend = "cmdstanr",
+	file = "fit_bef_joint",
+	file_refit = "on_change",
+	save_pars = save_pars(all = TRUE)
+	)
+	return(fit)
 }
 
-fit_befa.st <- function(df) {
-	nls(befa.st~bef0 + amp / (1 + sdi/r0),
-		data = df,
-	    start = list(bef0 = min(df$BEF, na.rm = TRUE),
-						amp = max(df$BEF, na.rm = TRUE) - min(df$BEF, na.rm = TRUE),
-						r0 = median(df$RSD,na.rm=TRUE)),
-		algorithm = "port",
-		lower = c(bef0 = 0, amp = 0, r0 = 1e-10)
-		)
-}
-
-df1<-bp[bp$ft1.forest_type =='mono_N',]
-
-mich_ment.mod<- function(df,y,x) {
-	df.mod<-data.frame(xx=df[[x]],yy=df[[y]])
-	df.mod<-df.mod[complete.cases(df.mod),]
-	nls(yy~L + A / (1 + xx/r0),
-		data = df.mod,
-	    start = list(L = min(df.mod$yy, na.rm = TRUE),
-	    			A = max(df.mod$yy, na.rm = TRUE) - min(df.mod$yy, na.rm = TRUE),
-					r0 = median(df.mod$xx,na.rm=TRUE)),
-		algorithm = "port",
-		lower = c(bef0 = 0, amp = 0, r0 = 1e-10)
-		)
-}
-fit<-mich_ment.mod(df1,'befa.st','sdi')
-	    
-newx<-seq(min(df1$sdi, na.rm=TRUE),max(df1$sdi, na.rm=TRUE),length.out=100)
-pred<-predict(fit,newdata = data.frame(xx = newx))
-
-	plot(befa.st~sdi,ylim=c(1,lmx),df1)
-	points(beft.st~ sdi,df1,col=2)
-	lines(newx, pred, col=4, lwd=2)
-
+fit_joint<-fit_bef_joint_bayes(bp,y_1="befa.st",y_2="beft.st",x="sdi",group = "ft1.forest_type",2,400,2)
+plot(fit_joint)
 par(mfrow=c(2,2))
 for (i in unique(bp$ft1.forest_type)){
-	df1<-bp[bp$ft1.forest_type ==i,]
+	df1<-bp[bp$ft1.forest_type==i,]
+
+
 lmx<-max(c(df1$beft.st,df1$befa.st),na.rm=TRUE)
 	plot(befa.st~ wb.shape,df1,ylim=c(1,lmx),main=i)
 	points(beft.st~ wb.shape,df1,col=2)
@@ -93,7 +102,7 @@ lmx<-max(c(df1$beft.st,df1$befa.st),na.rm=TRUE)
 
 	plot(befa.st~sdi,ylim=c(1,lmx),df1)
 	points(beft.st~ sdi,df1,col=2)
-	
+
 	plot(befa.st~dist.mmd,ylim=c(1,lmx),df1)
 	points(beft.st~ dist.mmd,df1,col=2)	
 	
@@ -118,58 +127,63 @@ lmx<-max(c(df1$beft.st,df1$befa.st),na.rm=TRUE)
 	
 	}
 
-par(mfrow=c(2,2))
+non.mod<-nls(befa.st~L+A/(1+sdi/r0),bp[bp$Family=='Pinaceae',],start=c(L=0.3,A=1.2,r0=2.6))
+
+plot(befa.st~sdi,bp[bp$Family=='Pinaceae',],col=0)
+for(i in 1:6){
+	sp_c<-unique(bp[bp$Family=='Pinaceae','sp_code'])[i]
+points(befa.st~sdi,bp[bp$sp_code==sp_c&bp$Family=='Pinaceae',],bg=i,pch=21)}
+points(befa.st~sdi,bp[bp$sp_code=='LL'&bp$Family=='Pinaceae',],bg='white',pch=22,col=4)
+df00<-bp[bp$Family=='Pinaceae',]
+sdi<-as.data.frame(seq(range(df00$sdi)[1],range(df00$sdi)[2],1))
+colnames(sdi)<-'sdi'
+sdi$befa.a.pre<-predict(non.mod,sdi)
+lines(befa.a.pre~sdi,sdi,lwd=1.1,col=4)
+
+
+par(mfrow=c(2,3))
 for (i in unique(bp$Family)){
 	df1<-bp[bp$Family==i,]
 lmx<-max(c(df1$beft.st,df1$befa.st),na.rm=TRUE)
-	plot(befa.st~ cv,df1,ylim=c(1,lmx),main=i)
-	points(beft.st~ cv,df1,col=2)
-
-	plot(befa.st~ wb.scale,ylim=c(1,lmx),df1)
+	plot(befa.st~ wb.scale,ylim=c(1,lmx),df1,main=i,xlim=c(0,.6))
 	points(beft.st~ wb.scale,df1,col=2)
 
-	plot(befa.st~sdi,ylim=c(1,lmx),df1)
-	points(beft.st~ sdi,df1,col=2)
-	
-	plot(befa.st~dist.mmd,ylim=c(1,lmx),df1)
-	points(beft.st~ dist.mmd,df1,col=2)	
-	
-	}
-	
+	plot(befa.st~ wb.shape,ylim=c(1,lmx),df1,main=i,xlim=c(0,12))
+	points(beft.st~ wb.shape,df1,col=2)
 
-par(mfrow=c(2,2))
+	plot(befa.st~sdi,ylim=c(1,lmx),df1,main=i,xlim=c(0,700))
+	points(beft.st~sdi,df1,col=2)	
+	}
+
+
+par(mfrow=c(2,3))
 for (i in unique(bp$Genus)){
 	df1<-bp[bp$Genus==i,]
 lmx<-max(c(df1$beft.st,df1$befa.st),na.rm=TRUE)
-	plot(befa.st~ cv,df1,ylim=c(1,lmx),main=i)
-	points(beft.st~ cv,df1,col=2)
-
-	plot(befa.st~ wb.scale,ylim=c(1,lmx),df1)
+	plot(befa.st~ wb.scale,ylim=c(1,lmx),df1,main=i,xlim=c(0,.6))
 	points(beft.st~ wb.scale,df1,col=2)
 
-	plot(befa.st~sdi,ylim=c(1,lmx),df1)
-	points(beft.st~ sdi,df1,col=2)
-	
-	plot(befa.st~dist.mmd,ylim=c(1,lmx),df1)
-	points(beft.st~ dist.mmd,df1,col=2)	
+	plot(befa.st~ wb.shape,ylim=c(1,lmx),df1,main=i,xlim=c(0,12))
+	points(beft.st~ wb.shape,df1,col=2)
+
+	plot(befa.st~sdi,ylim=c(1,lmx),df1,main=i,xlim=c(0,700))
+	points(beft.st~ sdi,df1,col=2)	
 	
 	}
 
-
-par(mfrow=c(2,2))
-for (i in unique(bp$sp_code)[1:12]){
+par(mfrow=c(2,3))
+for (i in unique(bp$sp_code)[1:22]){
 	df1<-bp[bp$sp_code==i,]
 lmx<-max(c(df1$beft.st,df1$befa.st),na.rm=TRUE)
-	plot(befa.st~ cv,df1,ylim=c(1,lmx),main=i)
-	points(beft.st~ cv,df1,col=2)
 
-	plot(befa.st~ wb.scale,ylim=c(1,lmx),df1)
+	plot(befa.st~ wb.scale,ylim=c(1,lmx),df1,main=i,xlim=c(0,.6))
 	points(beft.st~ wb.scale,df1,col=2)
 
-	plot(befa.st~sdi,ylim=c(1,lmx),df1)
-	points(beft.st~ sdi,df1,col=2)
-	
-	plot(befa.st~dist.mmd,ylim=c(1,lmx),df1)
-	points(beft.st~ dist.mmd,df1,col=2)	
-	
+	plot(befa.st~ wb.shape,ylim=c(1,lmx),df1,main=i,xlim=c(0,12))
+	points(beft.st~ wb.shape,df1,col=2)
+
+	plot(befa.st~sdi,ylim=c(1,lmx),df1,main=i,xlim=c(0,700))
+	points(beft.st~ sdi,df1,col=2)	
 	}
+
+plot(wb.scale~sdi,bp)
