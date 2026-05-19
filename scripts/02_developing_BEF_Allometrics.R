@@ -10,11 +10,11 @@ bp$Bw<-(bp$Bst+bp$Bbr+bp$Bcr)
 bp$Baw<-(bp$Bst+bp$Bbr)
 bp$Ba<-(bp$Bst+bp$Bbr+bp$Bf)
 bp$Bt<-(bp$Bst+bp$Bbr+bp$Bcr+bp$Bf)
+
+## The number of spcies
 sum(!is.na(unique(bp$sp_code)))
 unique(bp$sp_code)
 unique(bp$ft1.forest_type)
-
-
 
 
 exp_decay<- function(x, L, A, k) {
