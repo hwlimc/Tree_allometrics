@@ -1,15 +1,6 @@
 getwd()
 setwd('/Users/hyli0001/wrd/b/Dynamic_allometrics/')
 # system('ls -alt ../processed_data')
-
-
-fit_mm <- readRDS("processed_data/Bayes_mich_men_ft1.forest_type_1ch_20it_20260530_165427.rds")
-fit_exp <- readRDS("processed_data/Bayes_exp_decay_ft1.forest_type_1ch_20it_20260530_165427.rds")
-
-hist(as.data.frame(fit_mm)$b_y1_L_Intercept)
-plot(pred[,'Estimate','y1'], fit_mm$data$y1)
-plot(pred[,'Estimate','y2'], fit_mm$data$y1)
-
 bp<-read.table('processed_data/plot_biomass.txt',sep='\t',head=TRUE)
 
 ## The number of spcies
