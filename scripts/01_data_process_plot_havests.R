@@ -8,8 +8,6 @@ source('scripts/00_basic_functions.R')
 #################################
 
 raw.tb<-readRDS('raw_data/rawdata.rds')
-str(raw.tb, max.level=2)
-
 plt<-raw.tb$data$plot_info
 pft_h<-raw.tb$data$pft_harvest
 bh<-raw.tb$data$biomass_harvest
@@ -96,21 +94,21 @@ rownames(wb.para)<-NULL
 stand_sp<-unique(bh[,c('stand_id','sp_code')])
 stand_sp<-stand_sp[!(stand_sp$stand_id==1001&stand_sp$sp_code=='CS'),]
 
-ts.std<-merge(merge(merge(merge(merge(plt,dvst,by='stand_id'),merge(collap(ts,d+h~stand_id+plot_size,FUN=list(m=fmean,med=fmedian,sd=fsd,n=fnobs)),wb.para,by='stand_id'),by='stand_id'),sp_top3_wide,by='stand_id',all.x=TRUE),stand_sp,by='stand_id',all.x=TRUE),pft_h[, c("sp_code", "species")],by='sp_code',all.x=TRUE)
+ts.std<-merge(merge(merge(merge(merge(merge(plt,dvst,by='stand_id'),merge(collap(ts, d ~ stand_id + plot_size, FUN = list(m = function(x) sqrt(fmean(x^2)),med = function(x) sqrt(fmedian(x^2)),sd=fsd,n=fnobs)),collap(ts,h~stand_id+plot_size,FUN=list(m=fmean,med=fmedian,sd=fsd,n=fnobs)),by=c('stand_id','plot_size')),by='stand_id'),wb.para,by='stand_id'),sp_top3_wide,by='stand_id',all.x=TRUE),stand_sp,by='stand_id',all.x=TRUE),pft_h[, c("sp_code", "species")],by='sp_code',all.x=TRUE)
 
 ts.std$std<-ts.std$n.d/ts.std$plot_size
 
 ts.std$sp_ba.ha.1<-ts.std$sp_ba.1/ts.std$plot_size
 ts.std$sp_std.1<-ts.std$sp_n.1/ts.std$plot_size
-ts.std$sp_m.d.1<-sqrt((ts.std$sp_ba.ha.1/ts.std$sp_std.1)/pi)
+ts.std$sp_m.d.1<-sqrt((ts.std$sp_ba.ha.1/ts.std$sp_std.1)/pi)*2
 
 ts.std$sp_ba.ha.2<-ts.std$sp_ba.2/ts.std$plot_size
 ts.std$sp_std.2<-ts.std$sp_n.2/ts.std$plot_size
-ts.std$sp_m.d.2<-sqrt((ts.std$sp_ba.ha.2/ts.std$sp_std.2)/pi)
+ts.std$sp_m.d.2<-sqrt((ts.std$sp_ba.ha.2/ts.std$sp_std.2)/pi)*2
 
 ts.std$sp_ba.ha.3<-ts.std$sp_ba.3/ts.std$plot_size
 ts.std$sp_std.3<-ts.std$sp_n.3/ts.std$plot_size
-ts.std$sp_m.d.3<-sqrt((ts.std$sp_ba.ha.3/ts.std$sp_std.3)/pi)
+ts.std$sp_m.d.3<-sqrt((ts.std$sp_ba.ha.3/ts.std$sp_std.3)/pi)*2
 
 ts.std$dist.mmd<-ts.std$med.d-ts.std$m.d
 ts.std$sdi<-SDI(ts.std$std,ts.std$m.d*100,1.605)

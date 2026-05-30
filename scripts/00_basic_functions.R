@@ -1,5 +1,5 @@
 rm(list=ls())
-library('renv')
+
 library('collapse')
 library('fitdistrplus')
 SDI<-function(N.ha,D.cm,coef){

@@ -51,7 +51,15 @@ fit <- brm(
 		adapt_delta = adapt_delta,
 		max_treedepth = max_treedepth),
 	backend = "cmdstanr",
-	file = "fit_bef_mm",
+	file = paste0("processed_data/Bayes_mich_men_",
+	group,"_",
+	x,"_",
+    chains, "chn_",
+    iter, "itr_",
+	cores, "cor_", 
+    adapt_delta, "del_",
+    max_treedepth, "depth",
+    ".rds"),
 	file_refit = "on_change",
 	save_pars = save_pars(all = TRUE)
 	)
@@ -113,7 +121,15 @@ fit <- brm(
 		adapt_delta = adapt_delta,
 		max_treedepth = max_treedepth),
 	backend = "cmdstanr",
-	file = "fit_bef_exp",
+	file = paste0("processed_data/Bayes_exp_decay_",
+	group,"_",
+	x,"_",
+    chains, "chn_",
+    iter, "itr_",
+	cores, "cor_", 
+    adapt_delta, "del_",
+    max_treedepth, "depth",
+    ".rds"),
 	file_refit = "on_change",
 	save_pars = save_pars(all = TRUE)
 	)

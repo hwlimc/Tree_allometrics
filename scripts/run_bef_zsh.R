@@ -7,7 +7,7 @@ chains_n  <- as.numeric(args[2])
 iter_n    <- as.numeric(args[3])
 cores_n   <- as.numeric(args[4])
 adapt_delta_n <- as.numeric(args[5])
-treedepth_n   <- as.numeric(args[6])
+max_treedepth_n   <- as.numeric(args[6])
 x_var	<- args[7]
 
 library(brms)
@@ -25,7 +25,7 @@ fit_exp <- Bef_bayes_exp_decay(
   iter = iter_n,
   cores = cores_n,
   adapt_delta = adapt_delta_n,
-  max_treedepth = treedepth_n
+  max_treedepth = max_treedepth_n
 )
 
 fit_mm <- Bef_bayes_mich_men(
@@ -38,25 +38,10 @@ fit_mm <- Bef_bayes_mich_men(
   iter = iter_n,
   cores = cores_n,
   adapt_delta = adapt_delta_n,
-  max_treedepth = treedepth_n
+  max_treedepth = max_treedepth_n
 )
 timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
 
-
-saveRDS(
-  fit_exp,
-  paste0(
-    "processed_data/Bayes_exp_decay_",
-    group_var,
-    "_",
-    x_var,
-    "_",
-    chains_n, "ch_",
-    iter_n, "it_",
-    timestamp,
-    ".rds"
-  )
-)
 
 saveRDS(
   fit_mm,
@@ -66,9 +51,28 @@ saveRDS(
     "_",
     x_var,
     "_",
-    chains_n, "ch_",
-    iter_n, "it_",
-    timestamp,
+    chains_n, "chn_",
+    iter_n, "itr_",
+	cores_n, "cor_", 
+    adapt_delta_n, "del_",
+    max_treedepth_n, "depth",
+    ".rds"
+  )
+)
+
+saveRDS(
+  fit_exp,
+  paste0(
+    "processed_data/Bayes_exp_decay_",
+    group_var,
+    "_",
+    x_var,
+    "_",
+    chains_n, "chn_",
+    iter_n, "itr_",
+	cores_n, "cor_", 
+    adapt_delta_n, "del_",
+    max_treedepth_n, "depth",
     ".rds"
   )
 )

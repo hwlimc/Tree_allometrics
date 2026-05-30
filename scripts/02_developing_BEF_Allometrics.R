@@ -39,18 +39,17 @@ lmx<-max(c(df1$beft.st,df1$befa.st),na.rm=TRUE)
 	plot(befa.st~sdi,ylim=c(1,lmx),df1)
 	points(beft.st~ sdi,df1,col=2)
 
-	plot(befa.st~dist.mmd,ylim=c(1,lmx),df1)
-	points(beft.st~ dist.mmd,df1,col=2)	
-	
+	plot(befa.st~rsd,ylim=c(1,lmx),df1)
+	points(beft.st~ rsd,df1,col=2)	
 	}
-unique(bp[bp$Family=='','sp_code'])
-unique(bp[bp$sp_code=='LL','PFT'])
+	
+
 par(mfrow=c(2,2))
 for (i in unique(bp$PFT)){
 	df1<-bp[bp$PFT==i,]
 lmx<-max(c(df1$beft.st,df1$befa.st),na.rm=TRUE)
-	plot(befa.st~ cv,df1,ylim=c(1,lmx),main=i)
-	points(beft.st~ cv,df1,col=2)
+	plot(befa.st~ wb.shape,df1,ylim=c(1,lmx),main=i)
+	points(beft.st~ wb.shape,df1,col=2)
 
 	plot(befa.st~ wb.scale,ylim=c(1,lmx),df1)
 	points(beft.st~ wb.scale,df1,col=2)
@@ -58,36 +57,63 @@ lmx<-max(c(df1$beft.st,df1$befa.st),na.rm=TRUE)
 	plot(befa.st~sdi,ylim=c(1,lmx),df1)
 	points(beft.st~ sdi,df1,col=2)
 	
-	plot(befa.st~dist.mmd,ylim=c(1,lmx),df1)
-	points(beft.st~ dist.mmd,df1,col=2)	
-	
+	plot(befa.st~rsd,ylim=c(1,lmx),df1)
+	points(beft.st~ rsd,df1,col=2)		
 	}
 
-non.mod.mm<-nls(befa.st~mich_men(sdi,L,A,r0),bp[bp$Family=='Pinaceae',],start=c(L=0.3,A=1.2,r0=2.6))
+par(mfrow=c(2,2))
+for (i in unique(bp$sp_code)){
+	df1<-bp[bp$sp_code==i,]
+lmx<-max(c(df1$beft.st,df1$befa.st),na.rm=TRUE)
+	plot(befa.st~ wb.shape,df1,ylim=c(1,lmx),main=i)
+	points(beft.st~ wb.shape,df1,col=2)
 
-non.mod.exp<-nls(befa.st~exp_decay(sdi,L,A,k),bp[bp$Family=='Pinaceae',],start=c(L=1.3,A=1.4,k=.02))
+	plot(befa.st~ wb.scale,ylim=c(1,lmx),df1)
+	points(beft.st~ wb.scale,df1,col=2)
+
+	plot(befa.st~sdi,ylim=c(1,lmx),df1)
+	points(beft.st~ sdi,df1,col=2)
+	
+	plot(befa.st~rsd,ylim=c(1,lmx),df1)
+	points(beft.st~ rsd,df1,col=2)		
+	}
 
 
-non.mod.mm<-nls(befa.st~mich_men(sdi,L,A,r0),bp[bp$PFT=='ENF',],start=c(L=0.3,A=1.2,r0=2.6))
-non.mod.exp<-nls(befa.st~exp_decay(sdi,L,A,k),bp[bp$PFT=='ENF',],start=c(L=1.3,A=1.4,k=.02))
 
+non.mod.exp<-nls(befa.st~exp_decay(rsd,L,A,k),bp[bp$PFT=='ENF',],start=c(L=1.3,A=1.4,k=.2))
+
+plot(befa.st~rsd,bp[bp$PFT=='ENF',],col=0)
+for(i in 1:7){
+	sp_c<-unique(bp[bp$PFT=='ENF','sp_code'])[i]
+points(befa.st~rsd,bp[bp$sp_code==sp_c&bp$PFT=='ENF',],bg=i,pch=21)}
+df00<-bp[bp$PFT=='ENF',]
+rsd<-as.data.frame(seq(range(df00$rsd)[1],range(df00$rsd)[2],0.001))
+colnames(rsd)<-'rsd'
+bp$befa.a.pre<-predict(non.mod.exp,bp)
+rsd$befa.a.pre<-predict(non.mod.exp,rsd)
+summary(lm(befa.a.pre~befa.st,bp))
+lines(befa.a.pre~rsd,rsd,lwd=1.1,col=4)
+
+non.mod.exp<-nls(befa.st~exp_decay(sdi,L,A,k),bp[bp$PFT=='ENF',],start=c(L=1.3,A=1.4,k=0.1))
 
 plot(befa.st~sdi,bp[bp$PFT=='ENF',],col=0)
 for(i in 1:7){
 	sp_c<-unique(bp[bp$PFT=='ENF','sp_code'])[i]
 points(befa.st~sdi,bp[bp$sp_code==sp_c&bp$PFT=='ENF',],bg=i,pch=21)}
 df00<-bp[bp$PFT=='ENF',]
-sdi<-as.data.frame(seq(range(df00$sdi)[1],range(df00$sdi)[2],1))
+sdi<-as.data.frame(seq(range(df00$sdi)[1],range(df00$sdi)[2],0.001))
 colnames(sdi)<-'sdi'
-bp$befa.a.pre<-predict(non.mod.mm,bp)
-sdi$befa.a.pre<-predict(non.mod.mm,sdi)
-
+bp$befa.a.pre<-predict(non.mod.exp,bp)
+sdi$befa.a.pre<-predict(non.mod.exp,sdi)
 summary(lm(befa.a.pre~befa.st,bp))
 lines(befa.a.pre~sdi,sdi,lwd=1.1,col=4)
+
+
 
 unique(bp[bp$PFT=='ENF','sp_code'])[1]
 plot(befa.st~sdi,bp[bp$sp_code=='PK',])
 points(befa.st~sdi,bp[bp$sp_code=='PK'&bp$stand_id==1005,],col=2)
+
 
 plot(befa.st~sdi,bp[bp$Family=='Pinaceae',],col=0)
 for(i in 1:6){

@@ -10,7 +10,8 @@
 #   4000 \
 #   4 \
 #   0.99 \
-#   15
+#   15	\
+#   sdi
 #
 # ==========================================
 
@@ -34,14 +35,14 @@ cd "$WD" || {
 }
 
 echo "====================================="
-echo "Working Dir : $WD"
-echo "Group       : $GROUP"
-echo "Chains      : $CHAINS"
-echo "Iterations  : $ITER"
-echo "Cores       : $CORES"
-echo "Adapt Delta : $ADAPT"
-echo "Tree Depth  : $TREE"
-echo "X variable  : $XVAR"
+echo "Working Dir   : $WD"
+echo "Group         : $GROUP"
+echo "Chains        : $CHAINS"
+echo "Iterations    : $ITER"
+echo "Cores         : $CORES"
+echo "Adapt Delta   : $ADAPT"
+echo "Max TreeDepth : $TREE"
+echo "X variable    : $XVAR"
 echo "====================================="
 
 nohup Rscript scripts/run_bef_zsh.R \
