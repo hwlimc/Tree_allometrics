@@ -21,6 +21,7 @@ ITER=${4:-4000}
 CORES=${5:-4}
 ADAPT=${6:-0.99}
 TREE=${7:-15}
+XVAR=${8:-sdi}
 
 DATE=$(date +%Y%m%d_%H%M%S)
 
@@ -40,6 +41,7 @@ echo "Iterations  : $ITER"
 echo "Cores       : $CORES"
 echo "Adapt Delta : $ADAPT"
 echo "Tree Depth  : $TREE"
+echo "X variable  : $XVAR"
 echo "====================================="
 
 nohup Rscript scripts/run_bef_zsh.R \
@@ -49,6 +51,7 @@ nohup Rscript scripts/run_bef_zsh.R \
     "$CORES" \
     "$ADAPT" \
     "$TREE" \
+    "$XVAR" \
     > "$LOG_FILE" 2>&1 &
 
 echo ""

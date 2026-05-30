@@ -3,37 +3,31 @@ setwd('/Users/hyli0001/wrd/b/Dynamic_allometrics/')
 # system('ls -alt ../processed_data')
 
 
-fit_mm <- readRDS("processed_data/Bayes_mich_men_ft1.forest_type_1ch_20it_20260530_165427.rds")
-fit_exp <- readRDS("processed_data/Bayes_exp_decay_ft1.forest_type_1ch_20it_20260530_165427.rds")
+# fit_mm <- readRDS("processed_data/Bayes_mich_men_ft1.forest_type_1ch_20it_20260530_165427.rds")
+# fit_exp <- readRDS("processed_data/Bayes_exp_decay_ft1.forest_type_1ch_20it_20260530_165427.rds")
 
-hist(as.data.frame(fit_mm)$b_y1_L_Intercept)
-plot(pred[,'Estimate','y1'], fit_mm$data$y1)
-plot(pred[,'Estimate','y2'], fit_mm$data$y1)
+# hist(as.data.frame(fit_mm)$b_y1_L_Intercept)
+# plot(pred[,'Estimate','y1'], fit_mm$data$y1)
+# plot(pred[,'Estimate','y2'], fit_mm$data$y1)
 
 bp<-read.table('processed_data/plot_biomass.txt',sep='\t',head=TRUE)
-
-## The number of spcies
+head(bp)
+##The number of spcies
 sum(!is.na(unique(bp$sp_code)))
 unique(bp$sp_code)
 unique(bp$ft1.forest_type)
-unique(bp$PFT)
-
-head(bp)
+sum(!is.na(unique(bp$PFT)))
 
 exp_decay<- function(x, L, A, k) {
-  L + A * exp(-k * x)
-}
+  L + A * exp(-k * x)}
 
 mich_men <- function(x,L,A,r0) {
-  L + A / (1 + x/r0)
-}
-
+  L + A / (1 + x/r0)}
 
 
 par(mfrow=c(2,2))
 for (i in unique(bp$ft1.forest_type)){
 	df1<-bp[bp$ft1.forest_type==i,]
-
 
 lmx<-max(c(df1$beft.st,df1$befa.st),na.rm=TRUE)
 	plot(befa.st~ wb.shape,df1,ylim=c(1,lmx),main=i)
@@ -69,27 +63,17 @@ lmx<-max(c(df1$beft.st,df1$befa.st),na.rm=TRUE)
 	
 	}
 
-exp_decay<- function(x, L, A, k) {
-  L + A * exp(-k * x)
-}
-
-mich_men <- function(x,L,A,r0) {
-  L + A / (1 + x/r0)
-}
-
-
 non.mod.mm<-nls(befa.st~mich_men(sdi,L,A,r0),bp[bp$Family=='Pinaceae',],start=c(L=0.3,A=1.2,r0=2.6))
 
 non.mod.exp<-nls(befa.st~exp_decay(sdi,L,A,k),bp[bp$Family=='Pinaceae',],start=c(L=1.3,A=1.4,k=.02))
 
 
 non.mod.mm<-nls(befa.st~mich_men(sdi,L,A,r0),bp[bp$PFT=='ENF',],start=c(L=0.3,A=1.2,r0=2.6))
-
 non.mod.exp<-nls(befa.st~exp_decay(sdi,L,A,k),bp[bp$PFT=='ENF',],start=c(L=1.3,A=1.4,k=.02))
 
 
 plot(befa.st~sdi,bp[bp$PFT=='ENF',],col=0)
-for(i in 1:6){
+for(i in 1:7){
 	sp_c<-unique(bp[bp$PFT=='ENF','sp_code'])[i]
 points(befa.st~sdi,bp[bp$sp_code==sp_c&bp$PFT=='ENF',],bg=i,pch=21)}
 df00<-bp[bp$PFT=='ENF',]
@@ -101,8 +85,9 @@ sdi$befa.a.pre<-predict(non.mod.mm,sdi)
 summary(lm(befa.a.pre~befa.st,bp))
 lines(befa.a.pre~sdi,sdi,lwd=1.1,col=4)
 
-
-
+unique(bp[bp$PFT=='ENF','sp_code'])[1]
+plot(befa.st~sdi,bp[bp$sp_code=='PK',])
+points(befa.st~sdi,bp[bp$sp_code=='PK'&bp$stand_id==1005,],col=2)
 
 plot(befa.st~sdi,bp[bp$Family=='Pinaceae',],col=0)
 for(i in 1:6){

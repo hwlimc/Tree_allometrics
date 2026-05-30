@@ -14,6 +14,7 @@
 .Ruserdata
 .Rproj.user/
 *.Rproj
+logfiles/
 
 ############################
 # Temporary / backup files
