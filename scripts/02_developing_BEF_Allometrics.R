@@ -1,16 +1,79 @@
 getwd()
 setwd('/Users/hyli0001/wrd/b/Dynamic_allometrics/')
 # system('ls -alt ../processed_data')
+bp<-read.table('processed_data/plot_biomass.txt',sep='\t',head=TRUE)
+
+# baye.var<-c("stand_id","sp_code","plot","age","d","h","Bst","Bbr","Bf","Bcr","Vst","Vst.5","ba","befa.v","befa.st","beft.v","beft.st","bwd","PFT","Genus","Family","ft1.forest_type","ft1.dominant_prop","sdi","sdi.1","sdi.2","sdi.3","sdi_max","rsd","rsd.1","rsd.2")
+# write.table(bp[,baye.var],'processed_data/plot_biomass_bayes.txt',quote=FALSE,sep='\t',row.names=FALSE)
 
 
-# fit_mm <- readRDS("processed_data/Bayes_mich_men_ft1.forest_type_1ch_20it_20260530_165427.rds")
-# fit_exp <- readRDS("processed_data/Bayes_exp_decay_ft1.forest_type_1ch_20it_20260530_165427.rds")
+library(brms)
 
-# hist(as.data.frame(fit_mm)$b_y1_L_Intercept)
-# plot(pred[,'Estimate','y1'], fit_mm$data$y1)
-# plot(pred[,'Estimate','y2'], fit_mm$data$y1)
+
+fit_mm<-readRDS("processed_data/Bayes_mich_men_ft1.forest_type_rsd.1_4chn_8000itr_4cor_0.99del_15depth.rds")
+summary(fit_mm)
+names(fit_mm$data)
+exp_decay<- function(x, L, A, k) {
+  L + A * exp(-k * x)}
+
+mich_men <- function(x,L,A,r0) {
+  L + A / (1 + x/r0)}
+
+
+fit_exp<-readRDS("processed_data/Bayes_exp_decay_sp_code_rsd.1_4chn_8000itr_4cor_0.99del_15depth.rds")
+summary(fit_exp)
+pred<-fitted(fit_exp)
+posterior(fit_exp)
+names(fit_exp$data)
+hist(as.data.frame(fit_exp)$b_y1_L_Intercept)
+plot(pred[,'Estimate','y1'], fit_exp$data$y1,ylim=c(1,5),xlim=c(1,5))
+plot(pred[,'Estimate','y2'], fit_exp$data$y2,ylim=c(1,5),xlim=c(1,5))
 
 bp<-read.table('processed_data/plot_biomass.txt',sep='\t',head=TRUE)
+head(bp)
+
+source('scripts/00_bayesian_exp_decay.R')
+
+install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
+library(brms)
+library(cmdstanr)
+fit <- Bef_bayes_exp_decay(
+  data = bp,
+  y_1 = "befa.st",
+  y_2 = "beft.st",
+  x = "rsd",
+  hierarchy = c("ft1.forest_type","sp_code"),
+  chains = 2,
+  iter = 1000,
+  cores = 2,
+  adapt_delta = 0.95,
+  max_treedepth = 12
+)
+
+plot(fit)
+
+
+bppd<-bp[bp$sp_code%in%c('PDe','PD'),]
+
+<-bp$sp_code[bp$sp_code=='PDe']
+
+plot(befa.st~age, bppd)
+points(beft.st~age, bppd[bppd$sp_code=='PDe',],col=2)
+non.mod.exp<-nls(befa.st~exp_decay(rsd,L,A,k),bppd,start=c(L=11,A=12,k=3))
+
+curve(exp_decay(x,summary(non.mod.exp)$coe[1],summary(non.mod.exp)$coe[2],summary(non.mod.exp)$coe[3]),add=TRUE)
+
+
+bppd$befa.st.pre<-predict(non.mod.exp,bppd)
+bppd$befa.st.res<-bppd$befa.st-bppd$befa.st.pre
+curve(exp_decay(x,summary(non.mod.exp)$coe[1],summary(non.mod.exp)$coe[2],summary(non.mod.exp)$coe[3]),add=TRUE)
+lines(befa.st.pre~rsd,rsd,lwd=1.1,col=4)
+summary(lm(befa.st~befa.st.pre*sp_code,bppd))
+plot(befa.st.res~befa.st.pre,bppd)
+points(befa.st.res~befa.st.pre,bppd[bppd$sp_code=='PDe',],bg=2,pch=21)
+
+
+unique(bp[,c('species','sp_code')])
 head(bp)
 ##The number of spcies
 sum(!is.na(unique(bp$sp_code)))
@@ -18,11 +81,6 @@ unique(bp$sp_code)
 unique(bp$ft1.forest_type)
 sum(!is.na(unique(bp$PFT)))
 
-exp_decay<- function(x, L, A, k) {
-  L + A * exp(-k * x)}
-
-mich_men <- function(x,L,A,r0) {
-  L + A / (1 + x/r0)}
 
 
 par(mfrow=c(2,2))

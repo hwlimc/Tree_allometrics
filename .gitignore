@@ -59,6 +59,7 @@ Thumbs.db
 # *.xlsx
 #*.rds
 *.rdata
+bayes_outputs/
 
 ############################
 # Cache / intermediate data
