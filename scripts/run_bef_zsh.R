@@ -68,8 +68,8 @@ tryCatch({
 		x = x_var,
 		hierarchy = hierarchy_vec,
 		chains = chains_n,
-		iter = iter_n,
 		cores = cores_n,
+		iter = iter_n,
 		adapt_delta = adapt_delta_n,
 		max_treedepth = max_treedepth_n
 		)
