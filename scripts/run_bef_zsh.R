@@ -64,7 +64,7 @@ tryCatch({
 	fit_exp <- Bef_bayes_exp_decay(
 		bp,
 		y_1 = "befa.st",
-		y_2 = "beft.st",
+		y_2 = "befr.st",
 		x = x_var,
 		hierarchy = hierarchy_vec,
 		chains = chains_n,
