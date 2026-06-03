@@ -153,6 +153,7 @@ bp$befa.v<-(bp$Bst+bp$Bbr+bp$Bf)/bp$Vst
 bp$befa.st<-(bp$Bst+bp$Bbr+bp$Bf)/bp$Bst
 bp$beft.v<-(bp$Bst+bp$Bbr+bp$Bf+bp$Bcr)/bp$Vst
 bp$beft.st<-(bp$Bst+bp$Bbr+bp$Bf+bp$Bcr)/bp$Bst
+bp$befr.st<-bp$beft.st-bp$befa.st
 bp$bwd<-bp$Bst/bp$Vst/1000
 bp$d2h<-bp$d^2*bp$h
 bp$cai<-(bp$Vst-bp$Vst.5)/5

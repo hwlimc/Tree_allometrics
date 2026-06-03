@@ -1,61 +1,102 @@
 getwd()
 setwd('/Users/hyli0001/wrd/b/Dynamic_allometrics/')
-# system('ls -alt ../processed_data')
-bp<-read.table('processed_data/plot_biomass.txt',sep='\t',head=TRUE)
-
-# baye.var<-c("stand_id","sp_code","plot","age","d","h","Bst","Bbr","Bf","Bcr","Vst","Vst.5","ba","befa.v","befa.st","beft.v","beft.st","bwd","PFT","Genus","Family","ft1.forest_type","ft1.dominant_prop","sdi","sdi.1","sdi.2","sdi.3","sdi_max","rsd","rsd.1","rsd.2")
-# write.table(bp[,baye.var],'processed_data/plot_biomass_bayes.txt',quote=FALSE,sep='\t',row.names=FALSE)
+# system('ls -alt ../')
+# bp<-read.table('processed_data/plot_biomass.txt',sep='\t',head=TRUE)
+# baye.var<-c("stand_id","sp_code","plot","age","d","h","Bst","Bbr","Bf","Bcr","Vst","Vst.5","ba","befa.v","befa.st","beft.v","befr.st","bwd","PFT","Genus","Family","ft1.forest_type","ft1.dominant_prop","sdi","sdi.1","sdi.2","sdi.3","sdi_max","rsd","rsd.1","rsd.2")
+# # write.table(bp[,baye.var],'processed_data/plot_biomass_bayes.txt',quote=FALSE,sep='\t',row.names=FALSE)
+system('ls -alt bayes_outputs')
+baydata<-read.table('processed_data/plot_biomass_bayes.txt',sep='\t',head=TRUE)
+baydatabefr.st
 
 
 library(brms)
 
 
-fit_mm<-readRDS("processed_data/Bayes_mich_men_ft1.forest_type_rsd.1_4chn_8000itr_4cor_0.99del_15depth.rds")
-summary(fit_mm)
-names(fit_mm$data)
-exp_decay<- function(x, L, A, k) {
-  L + A * exp(-k * x)}
+ft_sp<-readRDS("bayes_outputs/exp_decay_ft1_forest_type_sp_code_rsd_4chn_4000itr_4cor_0.99del_15depth.rds")
+summary(ft_sp)
+ranef(ft_sp)
+fixef(ft_sp)
 
-mich_men <- function(x,L,A,r0) {
-  L + A / (1 + x/r0)}
-
-
-fit_exp<-readRDS("processed_data/Bayes_exp_decay_sp_code_rsd.1_4chn_8000itr_4cor_0.99del_15depth.rds")
-summary(fit_exp)
-pred<-fitted(fit_exp)
-posterior(fit_exp)
-names(fit_exp$data)
-hist(as.data.frame(fit_exp)$b_y1_L_Intercept)
-plot(pred[,'Estimate','y1'], fit_exp$data$y1,ylim=c(1,5),xlim=c(1,5))
-plot(pred[,'Estimate','y2'], fit_exp$data$y2,ylim=c(1,5),xlim=c(1,5))
-
-bp<-read.table('processed_data/plot_biomass.txt',sep='\t',head=TRUE)
-head(bp)
-
-source('scripts/00_bayesian_exp_decay.R')
-
-install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
-library(brms)
-library(cmdstanr)
-fit <- Bef_bayes_exp_decay(
-  data = bp,
-  y_1 = "befa.st",
-  y_2 = "beft.st",
-  x = "rsd",
-  hierarchy = c("ft1.forest_type","sp_code"),
-  chains = 2,
-  iter = 1000,
-  cores = 2,
-  adapt_delta = 0.95,
-  max_treedepth = 12
+h1_cf <- coef(ft_sp)$h1
+h1_param <- data.frame(
+  ft1_type = dimnames(h1_cf)[[1]],
+  y1_L = h1_cf[, "Estimate", "y1_L_Intercept"],
+  y1_A = h1_cf[, "Estimate", "y1_A_Intercept"],
+  y1_k = h1_cf[, "Estimate", "y1_k_Intercept"],
+  y2_L = h1_cf[, "Estimate", "y2_L_Intercept"],
+  y2_A = h1_cf[, "Estimate", "y2_A_Intercept"],
+  y2_k = h1_cf[, "Estimate", "y2_k_Intercept"]
 )
 
-plot(fit)
+h2_cf <- coef(ft_sp)$h2
+h2_param <- data.frame(
+  sp_code = dimnames(h2_cf)[[1]],
+  y1_L = h2_cf[, "Estimate", "y1_L_Intercept"],
+  y1_A = h2_cf[, "Estimate", "y1_A_Intercept"],
+  y1_k = h2_cf[, "Estimate", "y1_k_Intercept"],
+  y2_L = h2_cf[, "Estimate", "y2_L_Intercept"],
+  y2_A = h2_cf[, "Estimate", "y2_A_Intercept"],
+  y2_k = h2_cf[, "Estimate", "y2_k_Intercept"]
+)
+
+par(mfrow=c(1,3))
+x<-'rsd'
+y1<-'befa.st'
+y2<-'beft.st'
+for (i in unique(baydata$ft1.forest_type)){
+	dft <- baydata[baydata$ft1.forest_type == i, ]
+
+plot(dft[[x]],dft[[y2]], col = 0, xlab = "Relative stand density", ylab = "Biomass expansion factors",main = i,ylim = c(0.8,4),xlim=c(0,1.1))
+
+	sp_list<-unique(dft$sp_code)
+	for (j in seq_along(sp_list)){
+		sp <- sp_list[j]
+		dsub<-dft[dft$sp_code==sp,]
+		points(dsub[[x]], dsub[[y1]], pch = 21, bg = j,cex=0.75, col=0)
+		points(dsub[[x]], dsub[[y2]], pch = 2, col = j,lwd=0.5,cex=0.75)
+		}
+
+psub <- h1_param[h1_param$ft1_type == i, ]
+xseq <- seq(min(dft[[x]], na.rm = TRUE),max(dft[[x]], na.rm = TRUE),length.out = 200)
+ypre1 <- psub$y1_L + psub$y1_A * exp(-psub$y1_k * xseq)
+ypre2 <- psub$y2_L + psub$y2_A * exp(-psub$y2_k * xseq)
+
+lines(xseq, ypre1, col = 1, lwd = 2)
+lines(xseq, ypre2, col = 2, lwd = 2, lty = 2)
+}
+
+###################### PARAMETER DISTRIBUTION SHOULD BE MADE
 
 
-bppd<-bp[bp$sp_code%in%c('PDe','PD'),]
+############################## SPECIES TEST NEEDS TO BE DONE
 
-<-bp$sp_code[bp$sp_code=='PDe']
+for (i in seq_along(sp_list)) {
+  sp <- sp_list[i]
+
+  dsub <- dft[dft$sp_code == sp, ]
+  psub <- h2_param[h2_param$sp_code == sp, ]
+
+  if (nrow(psub) == 0) next
+
+  points(dsub[[x]], dsub[[y1]], bg = i, pch = 21)
+  points(dsub[[x]], dsub[[y2]], col = i, pch = 2)
+
+  xseq <- seq(min(dsub[[x]], na.rm = TRUE),
+              max(dsub[[x]], na.rm = TRUE),
+              length.out = 200)
+
+  ypre1 <- psub$y1_L + psub$y1_A * exp(-psub$y1_k * xseq)
+
+  ypre2 <- psub$y2_L + psub$y2_A * exp(-psub$y2_k * xseq)
+
+  lines(xseq, ypre1, col = i, lwd = 1.5)
+  lines(xseq, ypre2, col = i, lwd = 1.5,lty=2)
+
+}
+
+legend("topright", legend = sp_list,
+       col = seq_along(sp_list), pch = 21, lwd = 1.5)
+
 
 plot(befa.st~age, bppd)
 points(beft.st~age, bppd[bppd$sp_code=='PDe',],col=2)
@@ -88,8 +129,8 @@ for (i in unique(bp$ft1.forest_type)){
 	df1<-bp[bp$ft1.forest_type==i,]
 
 lmx<-max(c(df1$beft.st,df1$befa.st),na.rm=TRUE)
-	plot(befa.st~ wb.shape,df1,ylim=c(1,lmx),main=i)
-	points(beft.st~ wb.shape,df1,col=2)
+	plot(befa.st~ rsd,df1,ylim=c(1,lmx),main=i)
+	points(beft.st~rsd,df1,col=2)
 
 	plot(befa.st~ wb.scale,ylim=c(1,lmx),df1)
 	points(beft.st~ wb.scale,df1,col=2)

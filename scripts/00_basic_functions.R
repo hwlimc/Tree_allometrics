@@ -93,7 +93,7 @@ multilevel_diversity <- function(species, d, trait_table, trait_group) {
   
   B[is.na(B)] <- 0
   N[is.na(N)] <- 0
-  
+ ### Forest type as needle leaves, broad leaves, and mixture between the two 
   output[["Forest_type"]] <- list(
     forest_type = c("mixed", "mono_B", "mono_N")[1 + (B >= .75) + 2 * (N >= .75)],
     dominant_prop = max(B, N)

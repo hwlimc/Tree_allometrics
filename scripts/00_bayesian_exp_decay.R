@@ -55,7 +55,9 @@ if (!dir.exists("bayes_outputs")) {
   dir.create("bayes_outputs", recursive = TRUE)
 }
 
-	fit <- brm(bf_y1 + bf_y2 + set_rescor(FALSE),
+	fit <- brm(
+		bf_y1 + 
+		bf_y2 + set_rescor(FALSE),
 		data = df,
 		family = gaussian(),
 		prior = c(
@@ -63,7 +65,7 @@ if (!dir.exists("bayes_outputs")) {
 			prior(normal(0.6, 0.6), nlpar = "A", resp = "y1", lb = 0),
 			prior_string(prior_k, nlpar = "k", resp = "y1", lb = 0),
 
-			prior(normal(1.4, 0.5), nlpar = "L", resp = "y2", lb = 1),
+			prior(normal(0.75, 0.5), nlpar = "L", resp = "y2", lb = 0),
 			prior(normal(0.7, 0.7), nlpar = "A", resp = "y2", lb = 0),
 			prior_string(prior_k, nlpar = "k", resp = "y2", lb = 0)
 				),
