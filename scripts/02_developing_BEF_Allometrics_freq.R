@@ -69,14 +69,21 @@ mich_men <- function(x,L,A,r0) {
 }
 
 
-non.mod.mm<-nls(befa.st~mich_men(sdi,L,A,r0),bp[bp$Family=='Pinaceae',],start=c(L=0.3,A=1.2,r0=2.6))
+non.mod.exp<-nls(befa.st~exp_decay(rsd,L,A,k),bp[bp$PFT=='ENF',],start=c(L=1.3,A=1.4,k=2))
+summary(non.mod.exp)
 
-non.mod.exp<-nls(befa.st~exp_decay(sdi,L,A,k),bp[bp$Family=='Pinaceae',],start=c(L=1.3,A=1.4,k=.02))
+non.mod.exp1<-nls(befa.st~exp_decay(rsd,L,A,k),baydata[baydata$PFT=='ENF',],start=c(L=1.3,A=1.4,k=.2))
+summary(non.mod.exp1)
+anova(non.mod.exp1, non.mod.exp)
+head(bp)
 
+non.mod.exp<-nls(befa.st~exp_decay(rsd,L,A,k),bp[bp$ft1.forest_type=='mono_B',],start=c(L=1.3,A=1.4,k=2))
+summary(non.mod.exp)
 
-non.mod.mm<-nls(befa.st~mich_men(sdi,L,A,r0),bp[bp$PFT=='ENF',],start=c(L=0.3,A=1.2,r0=2.6))
+non.mod.exp1<-nls(befa.st~exp_decay(rsd,L,A,k),baydata[baydata$ft1.forest_type=='mono_B',],start=c(L=1.3,A=1.4,k=.2))
+summary(non.mod.exp1)
+anova(non.mod.exp1, non.mod.exp)
 
-non.mod.exp<-nls(befa.st~exp_decay(sdi,L,A,k),bp[bp$PFT=='ENF',],start=c(L=1.3,A=1.4,k=.02))
 
 
 plot(befa.st~sdi,bp[bp$PFT=='ENF',],col=0)

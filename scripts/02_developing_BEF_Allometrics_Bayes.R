@@ -2,20 +2,22 @@ getwd()
 setwd('/Users/hyli0001/wrd/b/Dynamic_allometrics/')
 # system('ls -alt ../')
 # bp<-read.table('processed_data/plot_biomass.txt',sep='\t',head=TRUE)
-# baye.var<-c("stand_id","sp_code","plot","age","d","h","Bst","Bbr","Bf","Bcr","Vst","Vst.5","ba","befa.v","befa.st","beft.v","befr.st","bwd","PFT","Genus","Family","ft1.forest_type","ft1.dominant_prop","sdi","sdi.1","sdi.2","sdi.3","sdi_max","rsd","rsd.1","rsd.2")
-# # write.table(bp[,baye.var],'processed_data/plot_biomass_bayes.txt',quote=FALSE,sep='\t',row.names=FALSE)
+# bp$ftp<-bp$ft1.forest_type
+# bp$ftp[bp$ft1.forest_type=='mixed']<-'mono_B'
+
+# baye.var<-c("stand_id","sp_code","plot","age","d","h","Bst","Bbr","Bf","Bcr","Vst","Vst.5","ba","befa.v","befa.st","beft.v","befr.st","beft.st","bwd","PFT","Genus","Family","ftp","ft1.forest_type","ft1.dominant_prop","sdi","sdi.1","sdi.2","sdi.3","sdi_max","rsd","rsd.1","rsd.2")
+# write.table(bp[,baye.var],'processed_data/plot_biomass_bayes.txt',quote=FALSE,sep='\t',row.names=FALSE)
 system('ls -alt bayes_outputs')
 baydata<-read.table('processed_data/plot_biomass_bayes.txt',sep='\t',head=TRUE)
-baydatabefr.st
-
-
 library(brms)
 
+ft_sp<-readRDS("bayes_outputs/exp_decay_ft1_forest_type_sp_code_rsd_4chn_6000itr_4cor_0.99del_15depth.rds")
 
-ft_sp<-readRDS("bayes_outputs/exp_decay_ft1_forest_type_sp_code_rsd_4chn_4000itr_4cor_0.99del_15depth.rds")
 summary(ft_sp)
-ranef(ft_sp)
-fixef(ft_sp)
+ranef(ft_sp)$h2[, , "y1_L_Intercept"]
+coef(ft_sp)
+
+
 
 h1_cf <- coef(ft_sp)$h1
 h1_param <- data.frame(
@@ -27,6 +29,10 @@ h1_param <- data.frame(
   y2_A = h1_cf[, "Estimate", "y2_A_Intercept"],
   y2_k = h1_cf[, "Estimate", "y2_k_Intercept"]
 )
+h1_param$y_L <- h1_param$y1_L + h1_param$y2_L
+h1_param$y_x0 <- (h1_param$y1_L + h1_param$y1_A) + (h1_param$y2_L + h1_param$y2_A)
+h1_param$y_A <- h1_param$y1_A + h1_param$y2_A
+
 
 h2_cf <- coef(ft_sp)$h2
 h2_param <- data.frame(
@@ -38,6 +44,20 @@ h2_param <- data.frame(
   y2_A = h2_cf[, "Estimate", "y2_A_Intercept"],
   y2_k = h2_cf[, "Estimate", "y2_k_Intercept"]
 )
+h2_param$y_L <- h2_param$y1_L+h2_param$y2_L
+h2_param$y_x0 <- (h2_param$y1_L+h2_param$y1_A)+(h2_param$y2_L+h2_param$y2_A)
+h2_param$y_A <- h2_param$y1_A + h2_param$y2_A
+head(baydata)
+range(baydata$d[baydata$PFT=='ENF'])
+baydata[baydata$d<0.05,]
+
+
+
+plot(befa.st~sdi,baydata[baydata$sp_code=='PDe',],ylim=c(1,6),xlim=c(0,500))
+points(befa.st~sdi,baydata[baydata$sp_code=='PD',],col=4)
+points(23,5.7,col=2)
+points(23,4.69,col=2)
+
 
 par(mfrow=c(1,3))
 x<-'rsd'
@@ -59,7 +79,7 @@ plot(dft[[x]],dft[[y2]], col = 0, xlab = "Relative stand density", ylab = "Bioma
 psub <- h1_param[h1_param$ft1_type == i, ]
 xseq <- seq(min(dft[[x]], na.rm = TRUE),max(dft[[x]], na.rm = TRUE),length.out = 200)
 ypre1 <- psub$y1_L + psub$y1_A * exp(-psub$y1_k * xseq)
-ypre2 <- psub$y2_L + psub$y2_A * exp(-psub$y2_k * xseq)
+ypre2 <- psub$y_L + psub$y_A * exp(-psub$y_x0 * xseq)
 
 lines(xseq, ypre1, col = 1, lwd = 2)
 lines(xseq, ypre2, col = 2, lwd = 2, lty = 2)

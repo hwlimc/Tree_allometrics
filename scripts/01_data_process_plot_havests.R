@@ -119,6 +119,34 @@ ts.std$sdi.3<-SDI(ts.std$sp_std.3,ts.std$sp_m.d.3*100,1.605)
 write.table(ts.std,'processed_data/stand_structure.txt',quote=FALSE,sep='\t',row.names=FALSE)
 
 
+#################################
+###### Analyzing NFI data ######
+#################################
+nfi<-read.table('original_files/KNFI/KNFI.txt',sep='\t',head=TRUE)
+
+unique(nfi$sp.dom)[is.na(match(unique(nfi$sp.dom), pft_h$수종))]
+pft_h$수종[is.na(match(pft_h$수종,unique(nfi$sp.dom)))]
+nfi$sp.bef<-nfi$sp.dom
+nfi$sp.bef[nfi$sp.dom=='편백']<-'편백나무'
+nfi$sp.bef[nfi$sp.dom=='사시나무']<-'현사시나무'
+nfi$sp.bef[nfi$sp.dom=='소나무']<-'중부지방소나무'
+nfi$sp.bef[nfi$admin.1%in%c('강원도','강원특별자치도')&nfi$sp.dom=='소나무']<-'강원지방소나무'
+pft_h$수종[is.na(match(pft_h$수종,unique(nfi$sp.bef)))]
+nfi[nfi$sp.dom=='상수리나무',]
+pft_h[pft_h$수종=='상수리',]
+
+
+nfi_h<-merge(nfi[nfi$sp.bef%in%c(pft_h$수종),],pft_h,by.x='sp.bef',by.y='수종',all.x=TRUE)
+nfi_h$d.qm<-sqrt((((nfi_h$ba.ha)/nfi_h$std.ha)/pi)*4)
+nfi_h$sdi<-SDI(nfi_h$std.ha,nfi_h$d.qm*100,1.605)
+
+head(nfi_h)
+
+est_sdi_max<-function(df, group = "sp_code", sdi = "sdi", q = 0.99) {
+  tapply(df[[sdi]], df[[group]], quantile, probs = q, na.rm = TRUE)
+}
+sdi_max_sp.nfi <- est_sdi_max(nfi_h, group = "sp_code", sdi = "sdi", q = 0.99)
+
 
 #################################
 ### Analyzing harvested trees ###
@@ -162,11 +190,10 @@ bp$Baw<-(bp$Bst+bp$Bbr)
 bp$Ba<-(bp$Bst+bp$Bbr+bp$Bf)
 bp$Bt<-(bp$Bst+bp$Bbr+bp$Bcr+bp$Bf)
 
-est_sdi_max<-function(df, group = "sp_code", sdi = "sdi", q = 0.99) {
-  tapply(df[[sdi]], df[[group]], quantile, probs = q, na.rm = TRUE)
-}
 
-sdi_max_sp <- est_sdi_max(ts.std, group = "sp_code", sdi = "sdi", q = 0.99)
+sdi_max_sp.bp <- est_sdi_max(ts.std, group = "sp_code", sdi = "sdi", q = 0.99)
+common_sp <- intersect(names(sdi_max_sp.bp), names(sdi_max_sp.nfi))
+sdi_max_sp<-pmax(sdi_max_sp.bp[common_sp],sdi_max_sp.nfi[common_sp],na.rm=TRUE)
 
 bp$sdi_max<-sdi_max_sp[as.character(bp$sp_code)]
 bp$rsd<-bp$sdi/bp$sdi_max
