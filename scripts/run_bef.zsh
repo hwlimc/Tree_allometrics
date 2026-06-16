@@ -4,6 +4,7 @@
 # Usage:
 # ./run_bef.zsh . processed_data/plot_biomass.txt "ft1.forest_type,sp_code" 4 4 4000 0.99 15 rsd
 # ./run_bef.zsh . processed_data/plot_biomass.txt "PFT,sp_code" 4 4 4000 0.99 15 rsd
+# ./run_bef.zsh . processed_data/plot_biomass.txt "PFT,sp_code" 4 4 4000 0.99 15 rsd log_partial_pool 1 student FALSE
 # ==========================================
 
 WD=${1:-$(pwd)}
@@ -15,6 +16,10 @@ ITER=${6:-4000}
 ADAPT=${7:-0.99}
 TREE=${8:-15}
 XVAR=${9:-rsd}
+MODEL=${10:-exp_decay}
+K_DEPTH=${11:-1}
+FAMILY=${12:-student}
+SCALE_X=${13:-FALSE}
 
 DATE=$(date +%Y%m%d_%H%M%S)
 
@@ -44,8 +49,9 @@ head -n 1 "$DATA_FILE" | tr '\t' '\n' | nl -ba
 
 SAFE_HIERARCHY=$(echo "$HIERARCHY" | tr ',' '_' | sed 's/[^A-Za-z0-9_]/_/g')
 SAFE_DATA=$(basename "$DATA_FILE" | sed 's/[^A-Za-z0-9_]/_/g')
+SAFE_MODEL=$(echo "$MODEL" | sed 's/[^A-Za-z0-9_]/_/g')
 
-LOG_FILE="scripts/logfiles/log_BEF_${SAFE_DATA}_${SAFE_HIERARCHY}_${XVAR}_${DATE}.txt"
+LOG_FILE="scripts/logfiles/log_BEF_${SAFE_MODEL}_${SAFE_DATA}_${SAFE_HIERARCHY}_${XVAR}_${DATE}.txt"
 
 echo "====================================="
 echo "Working Dir   : $WD"
@@ -57,6 +63,10 @@ echo "Iterations    : $ITER"
 echo "Adapt Delta   : $ADAPT"
 echo "Max TreeDepth : $TREE"
 echo "X variable    : $XVAR"
+echo "Model         : $MODEL"
+echo "k depth       : $K_DEPTH"
+echo "Family        : $FAMILY"
+echo "Scale x       : $SCALE_X"
 echo "Log file      : $LOG_FILE"
 echo "====================================="
 
@@ -70,6 +80,10 @@ Rscript scripts/run_bef_zsh.R \
   '$ADAPT' \
   '$TREE' \
   '$XVAR' \
+  '$MODEL' \
+  '$K_DEPTH' \
+  '$FAMILY' \
+  '$SCALE_X' \
   2>&1 | while IFS= read -r line; do
     printf '[%s] %s\n' \"\$(date '+%Y-%m-%d %H:%M:%S')\" \"\$line\"
   done

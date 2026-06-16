@@ -201,6 +201,12 @@ bp$rsd.1<-bp$sdi.1/bp$sdi_max
 bp$rsd.2<-bp$sdi.2/bp$sdi_max
 bp$rsd.3<-bp$sdi.3/bp$sdi_max
 
+bp$ftp<-bp$ft1.forest_type
+bp$ftp[bp$ft1.forest_type=='mixed']<-'brd'
+bp$ftp[bp$ft1.forest_type=='mono_B']<-'brd'
+bp$ftp[bp$ft1.forest_type=='mono_N']<-'cnf'
+
+
 write.table(bp,'processed_data/plot_biomass.txt',quote=FALSE,sep='\t',row.names=FALSE)
 
 

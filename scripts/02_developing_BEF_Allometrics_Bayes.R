@@ -2,18 +2,25 @@ getwd()
 setwd('/Users/hyli0001/wrd/b/Dynamic_allometrics/')
 # system('ls -alt ../')
 # bp<-read.table('processed_data/plot_biomass.txt',sep='\t',head=TRUE)
-# bp$ftp<-bp$ft1.forest_type
-# bp$ftp[bp$ft1.forest_type=='mixed']<-'mono_B'
-
 # baye.var<-c("stand_id","sp_code","plot","age","d","h","Bst","Bbr","Bf","Bcr","Vst","Vst.5","ba","befa.v","befa.st","beft.v","befr.st","beft.st","bwd","PFT","Genus","Family","ftp","ft1.forest_type","ft1.dominant_prop","sdi","sdi.1","sdi.2","sdi.3","sdi_max","rsd","rsd.1","rsd.2")
 # write.table(bp[,baye.var],'processed_data/plot_biomass_bayes.txt',quote=FALSE,sep='\t',row.names=FALSE)
 system('ls -alt bayes_outputs')
 baydata<-read.table('processed_data/plot_biomass_bayes.txt',sep='\t',head=TRUE)
 library(brms)
 
-ft_sp<-readRDS("bayes_outputs/exp_decay_ft1_forest_type_sp_code_rsd_4chn_6000itr_4cor_0.99del_15depth.rds")
+ftp_sp<-readRDS("bayes_outputs/exp_decay_ftp_sp_code_rsd_4chn_4000itr_4cor_0.99del_15depth.rds")
+ftp<-readRDS("bayes_outputs/exp_decay_ftp_rsd_4chn_4000itr_4cor_0.99del_15depth.rds")
+sp_c<-readRDS("bayes_outputs/exp_decay_sp_code_rsd_4chn_4000itr_4cor_0.99del_15depth.rds")
+pft_sp<-readRDS("bayes_outputs/exp_decay_PFT_sp_code_rsd_4chn_4000itr_4cor_0.99del_15depth.rds")
+pft<-readRDS("bayes_outputs/exp_decay_PFT_rsd_4chn_4000itr_4cor_0.99del_15depth.rds")
 
-summary(ft_sp)
+ftp_sp
+summary(ftp_sp)
+summary(pft_sp)
+summary(ftp)
+summary(pft)
+summary(sp_c)
+
 ranef(ft_sp)$h2[, , "y1_L_Intercept"]
 coef(ft_sp)
 
