@@ -6,78 +6,75 @@ bp<-read.table('processed_data/plot_biomass.txt',sep='\t',head=TRUE)
 ## The number of spcies
 sum(!is.na(unique(bp$sp_code)))
 unique(bp$sp_code)
-unique(bp$ft1.forest_type)
+unique(bp$ftp)
 unique(bp$PFT)
 
-head(bp)
-
 exp_decay<- function(x, L, A, k) {
   L + A * exp(-k * x)
 }
 
-mich_men <- function(x,L,A,r0) {
-  L + A / (1 + x/r0)
-}
+mod.eb<-nls(befa.st~exp_decay(rsd,L,A,k),bp[bp$PFT=='EBF',],start=c(L=2,A=4,k=1))
+mod.db<-nls(befa.st~exp_decay(rsd,L,A,k),bp[bp$PFT=='DBF',],start=c(L=1.3,A=1.4,k=2))
+mod.en<-nls(befa.st~exp_decay(rsd,L,A,k),bp[bp$PFT=='ENF',],start=c(L=1.3,A=1.4,k=2))
+mod.dn<-nls(befa.st~exp_decay(rsd,L,A,k),bp[bp$PFT=='DNF',],start=c(L=1.2,A=4,k=1))
+
+plot(befa.st~rsd,bp[bp$PFT=='EBF',])
+unique(bp[bp$PFT=='EBF','sp_code'])
+
+
+plot(befa.st~rsd,bp[bp$PFT=='EBF',])
+points(befa.st~rsd,bp[bp$PFT=='EBF'&bp$sp_code==unique(bp[bp$PFT=='EBF','sp_code'])[1],],bg=1,pch=21)
+points(befa.st~rsd,bp[bp$PFT=='EBF'&bp$sp_code==unique(bp[bp$PFT=='EBF','sp_code'])[7],],bg=7,pch=21)
+
+
+unique(bp[bp$PFT=='EBF','sp_code'])[1] ## OK
+unique(bp[bp$PFT=='EBF','sp_code'])[2] ## OK
+unique(bp[bp$PFT=='EBF','sp_code'])[3] ## Not enough samples
+unique(bp[bp$PFT=='EBF','sp_code'])[4] ## Opposite trend
+unique(bp[bp$PFT=='EBF','sp_code'])[5] ## Not enough samples
+unique(bp[bp$PFT=='EBF','sp_code'])[6] ## Not enough samples
+
+unique(bp[bp$PFT=='DBF','sp_code'])
+
+plot(befa.st~rsd,bp[bp$PFT=='DBF',])
+points(befa.st~rsd,bp[bp$PFT=='DBF'&bp$sp_code==unique(bp[bp$PFT=='DBF','sp_code'])[9],],bg=4,pch=21)
+
+unique(bp[bp$PFT=='DBF','sp_code'])[1] ## OK 
+unique(bp[bp$PFT=='DBF','sp_code'])[2] ## OK
+unique(bp[bp$PFT=='DBF','sp_code'])[3] ## OK
+unique(bp[bp$PFT=='DBF','sp_code'])[4] ## Not enough samples
+unique(bp[bp$PFT=='DBF','sp_code'])[5] ## Not enough samples
+unique(bp[bp$PFT=='DBF','sp_code'])[6] ## No pattern
+unique(bp[bp$PFT=='DBF','sp_code'])[7] ## OK
+unique(bp[bp$PFT=='DBF','sp_code'])[8] ## OK
 
 
 
-par(mfrow=c(2,2))
-for (i in unique(bp$ft1.forest_type)){
-	df1<-bp[bp$ft1.forest_type==i,]
+unique(bp[bp$PFT=='ENF','sp_code'])
+
+plot(befa.st~rsd,bp[bp$PFT=='ENF',])
+points(befa.st~rsd,bp[bp$PFT=='ENF'&bp$sp_code==unique(bp[bp$PFT=='ENF','sp_code'])[5],],bg=5,pch=21)
+
+unique(bp[bp$PFT=='ENF','sp_code'])[1] ## OK
+unique(bp[bp$PFT=='ENF','sp_code'])[2] ## OK
+unique(bp[bp$PFT=='ENF','sp_code'])[3] ## OK
+unique(bp[bp$PFT=='ENF','sp_code'])[4] ## OK
+unique(bp[bp$PFT=='ENF','sp_code'])[5] ## OK
+unique(bp[bp$PFT=='ENF','sp_code'])[6] ## OK
+unique(bp[bp$PFT=='ENF','sp_code'])[7] ## OK
 
 
-lmx<-max(c(df1$beft.st,df1$befa.st),na.rm=TRUE)
-	plot(befa.st~ wb.shape,df1,ylim=c(1,lmx),main=i)
-	points(beft.st~ wb.shape,df1,col=2)
-
-	plot(befa.st~ wb.scale,ylim=c(1,lmx),df1)
-	points(beft.st~ wb.scale,df1,col=2)
-
-	plot(befa.st~sdi,ylim=c(1,lmx),df1)
-	points(beft.st~ sdi,df1,col=2)
-
-	plot(befa.st~dist.mmd,ylim=c(1,lmx),df1)
-	points(beft.st~ dist.mmd,df1,col=2)	
-	
-	}
-unique(bp[bp$Family=='','sp_code'])
-unique(bp[bp$sp_code=='LL','PFT'])
-par(mfrow=c(2,2))
-for (i in unique(bp$PFT)){
-	df1<-bp[bp$PFT==i,]
-lmx<-max(c(df1$beft.st,df1$befa.st),na.rm=TRUE)
-	plot(befa.st~ cv,df1,ylim=c(1,lmx),main=i)
-	points(beft.st~ cv,df1,col=2)
-
-	plot(befa.st~ wb.scale,ylim=c(1,lmx),df1)
-	points(beft.st~ wb.scale,df1,col=2)
-
-	plot(befa.st~sdi,ylim=c(1,lmx),df1)
-	points(beft.st~ sdi,df1,col=2)
-	
-	plot(befa.st~dist.mmd,ylim=c(1,lmx),df1)
-	points(beft.st~ dist.mmd,df1,col=2)	
-	
-	}
-
-exp_decay<- function(x, L, A, k) {
-  L + A * exp(-k * x)
-}
-
-mich_men <- function(x,L,A,r0) {
-  L + A / (1 + x/r0)
-}
 
 
-non.mod.exp<-nls(befa.st~exp_decay(rsd,L,A,k),bp[bp$PFT=='ENF',],start=c(L=1.3,A=1.4,k=2))
-summary(non.mod.exp)
+nrow(bp[bp$PFT=='EBF',])
+summary(mod.enf)
 
-non.mod.exp1<-nls(befa.st~exp_decay(rsd,L,A,k),baydata[baydata$PFT=='ENF',],start=c(L=1.3,A=1.4,k=.2))
-summary(non.mod.exp1)
+mod.<-nls(befa.st~exp_decay(rsd,L,A,k),bp[bp$ft1.forest_type=='mono_B',],start=c(L=1.3,A=1.4,k=2))
+
 anova(non.mod.exp1, non.mod.exp)
 head(bp)
 
-non.mod.exp<-nls(befa.st~exp_decay(rsd,L,A,k),bp[bp$ft1.forest_type=='mono_B',],start=c(L=1.3,A=1.4,k=2))
+
 summary(non.mod.exp)
 
 non.mod.exp1<-nls(befa.st~exp_decay(rsd,L,A,k),baydata[baydata$ft1.forest_type=='mono_B',],start=c(L=1.3,A=1.4,k=.2))

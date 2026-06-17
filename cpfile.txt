@@ -1,2 +1,1 @@
-rsync -avz bayes_outputs/ hyli0001@10.1.64.125:/Users/hyli0001/wrd/b/Dynamic_allometrics/bayes_outputs
-
+rsync -avz hlim@100.118.223.9:~/wrd/b/Dynamic_allometrics/bayes_outputs/ bayes_outputs/
