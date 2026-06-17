@@ -2,7 +2,7 @@
 ##
 ## Example:
 ## Rscript --vanilla scripts/05_diagnose_species_misfit.R \
-##   bayes_outputs/exp_decay_log_partial_pool_ftp_sp_code_kdepth0_rsd_student_4chn_4000itr_4cor_0.99del_15depth.rds \
+##   bayes_outputs/xp_ftp-sp_code_k0_gamma_rsd_4-4k-99-15.rds \
 ##   sp_code
 ##
 ## Optional arguments:
@@ -64,9 +64,9 @@ if (!"x" %in% names(dat)) {
   stop("Expected fit$data to contain column 'x'.")
 }
 
-response_vars <- intersect(c("y1", "y2"), names(dat))
+response_vars <- intersect(c("y1m1", "y2", "y1", "z1", "z2"), names(dat))
 if (length(response_vars) == 0) {
-  stop("Expected fit$data to contain y1 and/or y2.")
+  stop("Expected fit$data to contain a supported response column.")
 }
 
 log_mean_exp <- function(x) {
@@ -82,6 +82,30 @@ as_draw_matrix <- function(x) {
   x
 }
 
+display_response_name <- function(response) {
+  switch(
+    response,
+    y1m1 = "befa.st",
+    y1 = "befa.st",
+    z1 = "befa.st",
+    y2 = "befr.st",
+    z2 = "befr.st",
+    response
+  )
+}
+
+backtransform_values <- function(response, values) {
+  switch(
+    response,
+    y1m1 = values + 1,
+    y1 = values,
+    z1 = exp(values) + 1,
+    y2 = values,
+    z2 = exp(values),
+    values
+  )
+}
+
 diagnose_response <- function(response) {
   obs_id <- which(!is.na(dat[[response]]))
   if (length(obs_id) == 0) {
@@ -89,7 +113,7 @@ diagnose_response <- function(response) {
   }
 
   newdata <- dat[obs_id, , drop = FALSE]
-  observed <- newdata[[response]]
+  observed <- backtransform_values(response, newdata[[response]])
   group <- as.character(newdata[[group_col]])
 
   message("Predicting ", response, " for ", length(obs_id), " observed rows")
@@ -111,6 +135,7 @@ diagnose_response <- function(response) {
       ndraws = ndraws
     )
   )
+  yrep <- backtransform_values(response, yrep)
 
   pred_median <- apply(epred, 2, stats::median)
   pred_q05 <- apply(epred, 2, stats::quantile, probs = 0.05)
@@ -124,7 +149,7 @@ diagnose_response <- function(response) {
   residual <- observed - pred_median
 
   pointwise <- data.frame(
-    response = response,
+    response = display_response_name(response),
     row_id = obs_id,
     group = group,
     x = newdata$x,
@@ -149,7 +174,7 @@ diagnose_response <- function(response) {
     bias_draws <- -bias_draws
 
     data.frame(
-      response = response,
+      response = display_response_name(response),
       group = g,
       n = length(i),
       x_min = min(newdata$x[i], na.rm = TRUE),

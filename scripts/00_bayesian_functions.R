@@ -35,8 +35,10 @@ bayes_safe_name <- function(values, none = "none") {
 	if (length(values) == 0 || all(!nzchar(as.character(values)))) {
 		return(none)
 	}
-	value <- paste(values, collapse = "_")
-	value <- gsub("[^A-Za-z0-9_]+", "_", value)
+	value <- paste(values, collapse = "-")
+	value <- gsub("[^A-Za-z0-9_-]+", "-", value)
+	value <- gsub("-+", "-", value)
+	value <- gsub("(^-+|-+$)", "", value)
 	if (!nzchar(value)) {
 		value <- none
 	}
@@ -54,7 +56,7 @@ bayes_compact_hierarchy_name <- function(hierarchy) {
 	if (length(hierarchy) == 0) {
 		return("none")
 	}
-	paste(vapply(hierarchy, bayes_safe_name, character(1), none = "none"), collapse = ".")
+	paste(vapply(hierarchy, bayes_safe_name, character(1), none = "none"), collapse = "-")
 }
 
 bayes_compact_family_name <- function(family) {
@@ -68,8 +70,14 @@ bayes_compact_family_name <- function(family) {
 	family <- tolower(trimws(as.character(family)[1]))
 	switch(
 		family,
-		student = "stud",
-		gaussian = "gaus",
+		student = "tdis",
+		stud = "tdis",
+		tdis = "tdis",
+		gaussian = "ndis",
+		gausian = "ndis",
+		gaus = "ndis",
+		normal = "ndis",
+		ndis = "ndis",
 		bayes_safe_name(family)
 	)
 }
@@ -77,10 +85,10 @@ bayes_compact_family_name <- function(family) {
 bayes_compact_depth_name <- function(k_hierarchy_depth) {
 	k_hierarchy_depth <- as.integer(k_hierarchy_depth)
 	if (is.na(k_hierarchy_depth)) {
-		return("coef0")
+		return("k0")
 	}
 	if (k_hierarchy_depth == 0) {
-		return("coef0")
+		return("k0")
 	}
 	paste0("k", k_hierarchy_depth)
 }
@@ -116,11 +124,11 @@ bayes_file_suffix <- function(file_suffix) {
 	if (is.null(file_suffix) || bayes_is_none(file_suffix)) {
 		return("")
 	}
-	paste0(".", bayes_safe_name(file_suffix, none = ""))
-}
-
-bayes_family_name <- function(family) {
-	bayes_compact_family_name(family)
+	suffix <- bayes_safe_name(file_suffix, none = "")
+	if (!nzchar(suffix)) {
+		return("")
+	}
+	paste0("_", suffix)
 }
 
 bayes_build_output_file <- function(shape,
@@ -135,14 +143,14 @@ bayes_build_output_file <- function(shape,
                                     scale_x,
                                     file_suffix = NULL) {
 	paste0(
-		bayes_model_abbr(shape), ".",
-		bayes_compact_hierarchy_name(hierarchy), ".",
-		bayes_compact_depth_name(k_hierarchy_depth), ".",
-		bayes_family_name(family), ".",
-		bayes_safe_name(if (scale_x) paste0(x, "_scaled") else x), ".",
-		bayes_compact_chain_name(chains), ".",
-		bayes_compact_iter_name(iter), ".",
-		bayes_compact_delta_name(adapt_delta), ".",
+		bayes_model_abbr(shape), "_",
+		bayes_compact_hierarchy_name(hierarchy), "_",
+		bayes_compact_depth_name(k_hierarchy_depth), "_",
+		bayes_compact_family_name(family), "_",
+		bayes_safe_name(if (scale_x) paste0(x, "_scaled") else x), "_",
+		bayes_compact_chain_name(chains), "-",
+		bayes_compact_iter_name(iter), "-",
+		bayes_compact_delta_name(adapt_delta), "-",
 		bayes_compact_treedepth_name(max_treedepth),
 		bayes_file_suffix(file_suffix),
 		".rds"
@@ -203,10 +211,6 @@ bayes_make_prior <- function(spec, ...) {
 	prior_string(prior_text, ...)
 }
 
-bayes_append_prior <- function(priors, prior_spec) {
-	c(priors, list(prior_spec))
-}
-
 bayes_combine_priors <- function(priors) {
 	if (length(priors) == 0) {
 		stop("No priors were generated.")
@@ -230,20 +234,18 @@ bayes_build_priors <- function(shape, responses, hierarchy_depth, k_hierarchy_de
 
 	for (response in responses) {
 		for (parameter in parameter_names) {
-			priors <- bayes_append_prior(
-				priors,
-				bayes_make_prior(
-					bayes_shape_parameter_prior(shape, response, parameter),
-					nlpar = parameter,
-					resp = response
-				)
+			priors[[length(priors) + 1L]] <- bayes_make_prior(
+				bayes_shape_parameter_prior(shape, response, parameter),
+				nlpar = parameter,
+				resp = response
 			)
 		}
 
 		if (!is.null(shape$response_priors$sigma)) {
-			priors <- bayes_append_prior(
-				priors,
-				bayes_make_prior(shape$response_priors$sigma, class = "sigma", resp = response)
+			priors[[length(priors) + 1L]] <- bayes_make_prior(
+				shape$response_priors$sigma,
+				class = "sigma",
+				resp = response
 			)
 		}
 	}
@@ -252,14 +254,11 @@ bayes_build_priors <- function(shape, responses, hierarchy_depth, k_hierarchy_de
 		depth <- bayes_parameter_depth(shape$parameters[[parameter]], hierarchy_depth, k_hierarchy_depth)
 		if (depth > 0 && !is.null(shape$parameters[[parameter]]$sd_prior)) {
 			for (response in responses) {
-				priors <- bayes_append_prior(
-					priors,
-					bayes_make_prior(
-						shape$parameters[[parameter]]$sd_prior,
-						class = "sd",
-						nlpar = parameter,
-						resp = response
-					)
+				priors[[length(priors) + 1L]] <- bayes_make_prior(
+					shape$parameters[[parameter]]$sd_prior,
+					class = "sd",
+					nlpar = parameter,
+					resp = response
 				)
 			}
 		}
@@ -290,7 +289,7 @@ Bef_bayes_fit_model_shape <- function(data,
                                       cores = 4,
                                       adapt_delta = 0.99,
                                       max_treedepth = 15,
-                                      family = student(),
+                                      family = Gamma(link = "identity"),
                                       scale_x = FALSE,
                                       file_refit = "on_change",
                                       file_suffix = NULL,
@@ -331,8 +330,10 @@ Bef_bayes_fit_model_shape <- function(data,
 		stop(y_2, " must be > 0 for log(y2).")
 	}
 
-	df$z1 <- log(df$y1 - 1)
-	df$z2 <- ifelse(is.na(df$y2), NA_real_, log(df$y2))
+	df$y1m1 <- df$y1 - 1
+	if (any(df$y1m1 <= 0, na.rm = TRUE)) {
+		stop(y_1, " - 1 must be > 0 for original-scale modeling.")
+	}
 	df <- bayes_add_hierarchy_factors(df, hierarchy)
 
 	if (scale_x) {
@@ -350,11 +351,11 @@ Bef_bayes_fit_model_shape <- function(data,
 		bayes_random_intercept_formula(depth)
 	})
 
-	bf_z1 <- bayes_build_nl_formula("z1", shape, parameter_formulas)
-	bf_z2 <- bayes_build_nl_formula("z2", shape, parameter_formulas, missing = TRUE)
+	bf_y1 <- bayes_build_nl_formula("y1m1", shape, parameter_formulas)
+	bf_y2 <- bayes_build_nl_formula("y2", shape, parameter_formulas, missing = TRUE)
 	priors <- bayes_build_priors(
 		shape,
-		responses = c("z1", "z2"),
+		responses = c("y1m1", "y2"),
 		hierarchy_depth = length(hierarchy),
 		k_hierarchy_depth = k_hierarchy_depth
 	)
@@ -378,8 +379,8 @@ Bef_bayes_fit_model_shape <- function(data,
 	)
 
 	fit <- brm(
-		bf_z1 +
-			bf_z2 + set_rescor(FALSE),
+		bf_y1 +
+			bf_y2 + set_rescor(FALSE),
 		data = df,
 		family = family,
 		prior = priors,

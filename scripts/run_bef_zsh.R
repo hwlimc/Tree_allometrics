@@ -3,12 +3,13 @@ usage <- paste0(
 	"<data_file> <hierarchy> <chains> <cores> <iter> <adapt_delta> <max_treedepth> <x_var> ",
 	"[model] [k_hierarchy_depth] [family] [scale_x] [split_col] [split_values] [drop_split_from_hierarchy]\n",
 	"Model is a shape name from scripts/00_model_shapes.R, such as exp_decay, michaelis_menten, or linear.\n",
+	"Family can be gamma, lognormal/lnorm, student/tdis, or gaussian/normal/ndis.\n",
 	"Combined example: Rscript scripts/run_bef_zsh.R ",
 	"processed_data/plot_biomass.txt 'PFT,sp_code' 4 4 4000 0.99 15 rsd ",
-	"exp_decay 1 student FALSE none all TRUE\n",
+	"exp_decay 1 gamma FALSE none all TRUE\n",
 	"Separate species example: Rscript scripts/run_bef_zsh.R ",
 	"processed_data/plot_biomass.txt none 4 4 4000 0.99 15 rsd ",
-	"exp_decay 0 student FALSE sp_code all TRUE"
+	"exp_decay 0 gamma FALSE sp_code all TRUE"
 )
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -54,7 +55,7 @@ max_treedepth_n <- as_number(arg(7), "max_treedepth")
 x_var <- arg(8)
 model_type <- tolower(arg(9, "exp_decay"))
 k_hierarchy_depth_n <- as_number(arg(10, "1"), "k_hierarchy_depth")
-family_arg <- tolower(arg(11, "student"))
+family_arg <- tolower(arg(11, "gamma"))
 scale_x <- as_flag(arg(12, "FALSE"))
 split_col <- trimws(arg(13, "none"))
 split_values_arg <- trimws(arg(14, "all"))
@@ -93,18 +94,20 @@ if (has_split) {
 family_obj <- switch(
 	family_arg,
 	student = student(),
+	stud = student(),
+	tdis = student(),
+	gamma = Gamma(link = "identity"),
+	lognormal = lognormal(),
+	lnorm = lognormal(),
 	gaussian = gaussian(),
-	stop("Unknown family: ", family_arg, ". Use 'student' or 'gaussian'.")
+	gausian = gaussian(),
+	gaus = gaussian(),
+	normal = gaussian(),
+	ndis = gaussian(),
+	stop("Unknown family: ", family_arg, ". Use 'lognormal'/'lnorm', 'gamma', 'student'/'tdis', or 'gaussian'/'normal'/'ndis'.")
 )
 
 fit_model <- function(data, hierarchy, file_suffix = NULL) {
-	if (k_hierarchy_depth_n > length(hierarchy)) {
-		stop(
-			"k_hierarchy_depth (", k_hierarchy_depth_n,
-			") is larger than hierarchy depth (", length(hierarchy), ")."
-		)
-	}
-
 	Bef_bayes_fit_model_shape(
 		data,
 		y_1 = "befa.st",
@@ -142,11 +145,15 @@ fit_subset <- function(split_value) {
 		"Subset hierarchy" = bayes_label(current_hierarchy)
 	))
 
-	fit_model(
+	fit <- fit_model(
 		current_data,
 		current_hierarchy,
-		file_suffix = paste0(split_col, "_", split_value)
+		file_suffix = paste0(tolower(split_col), "-", split_value)
 	)
+	output_file <- bayes_fit_file(fit)
+	rm(fit)
+	invisible(gc())
+	output_file
 }
 
 tryCatch({
@@ -169,7 +176,7 @@ tryCatch({
 		"k hierarchy depth" = k_hierarchy_depth_n,
 		"Family" = family_arg,
 		"Scale x" = scale_x,
-	"Split column" = if (has_split) split_col else "none"
+		"Split column" = if (has_split) split_col else "none"
 	))
 	if (has_split) {
 		print_fields(c(
@@ -180,14 +187,17 @@ tryCatch({
 	cat("=====================================\n\n")
 
 	if (has_split) {
-		fit_exp <- setNames(vector("list", length(split_values)), split_values)
+		output_files <- setNames(rep(NA_character_, length(split_values)), split_values)
 		for (split_value in split_values) {
-			fit_exp[[split_value]] <- fit_subset(split_value)
-			cat("Saved model file:", bayes_fit_file(fit_exp[[split_value]]), "\n")
+			output_files[[split_value]] <- fit_subset(split_value)
+			cat("Saved model file:", output_files[[split_value]], "\n")
 		}
 	} else {
-		fit_exp <- fit_model(bp, hierarchy_vec)
-		cat("Saved model file:", bayes_fit_file(fit_exp), "\n")
+		fit <- fit_model(bp, hierarchy_vec)
+		output_files <- bayes_fit_file(fit)
+		rm(fit)
+		invisible(gc())
+		cat("Saved model file:", output_files, "\n")
 	}
 
 	end_time <- Sys.time()
@@ -201,11 +211,11 @@ tryCatch({
 	))
 	if (has_split) {
 		cat("Saved model files:\n")
-		for (name in names(fit_exp)) {
-			cat("  ", name, ": ", bayes_fit_file(fit_exp[[name]]), "\n", sep = "")
+		for (name in names(output_files)) {
+			cat("  ", name, ": ", output_files[[name]], "\n", sep = "")
 		}
 	} else {
-		cat("Saved model file:", bayes_fit_file(fit_exp), "\n")
+		cat("Saved model file:", output_files, "\n")
 	}
 }, error = function(e) {
 	cat("\nERROR OCCURRED\n")

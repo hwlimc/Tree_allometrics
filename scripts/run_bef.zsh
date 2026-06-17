@@ -6,13 +6,14 @@ unsetopt BG_NICE 2>/dev/null || true
 # ./run_bef.zsh WD DATA_FILE HIERARCHY CHAINS CORES ITER ADAPT TREE XVAR MODEL K_DEPTH FAMILY SCALE_X SPLIT_COL SPLIT_VALUES DROP_SPLIT
 #
 # MODEL is a shape name from scripts/00_model_shapes.R, for example exp_decay,
-# michaelis_menten, or linear.
+# michaelis_menten, or linear. FAMILY can be gamma, lognormal/lnorm,
+# student/tdis, or gaussian/normal/ndis.
 #
 # Combined model:
-# ./run_bef.zsh . processed_data/plot_biomass.txt "PFT,sp_code" 4 4 4000 0.99 15 rsd exp_decay 1 student FALSE none all TRUE
+# ./run_bef.zsh . processed_data/plot_biomass.txt "PFT,sp_code" 4 4 4000 0.99 15 rsd exp_decay 1 gamma FALSE none all TRUE
 #
 # Separate species models:
-# ./run_bef.zsh . processed_data/plot_biomass.txt none 4 4 4000 0.99 15 rsd exp_decay 0 student FALSE sp_code all TRUE
+# ./run_bef.zsh . processed_data/plot_biomass.txt none 4 4 4000 0.99 15 rsd exp_decay 0 gamma FALSE sp_code all TRUE
 
 WD=${1:-$(pwd)}
 DATA_FILE=${2:-processed_data/plot_biomass.txt}
@@ -25,14 +26,14 @@ TREE=${8:-15}
 XVAR=${9:-rsd}
 MODEL=${10:-exp_decay}
 K_DEPTH=${11:-1}
-FAMILY=${12:-student}
+FAMILY=${12:-gamma}
 SCALE_X=${13:-FALSE}
 SPLIT_COL=${14:-none}
 SPLIT_VALUES=${15:-all}
 DROP_SPLIT=${16:-TRUE}
 
 safe_name() {
-	printf '%s' "$1" | tr ',' '_' | sed 's/[^A-Za-z0-9_]/_/g; s/^$/none/'
+	printf '%s' "$1" | tr ',' '-' | sed 's/[^A-Za-z0-9_-]/-/g; s/-\{1,\}/-/g; s/^-//; s/-$//; s/^$/none/'
 }
 
 print_field() {

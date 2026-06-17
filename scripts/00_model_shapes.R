@@ -32,6 +32,7 @@ bayes_model_shape <- function(name,
 }
 
 bayes_model_shapes <- list(
+	# Original-scale models use y1m1 = befa.st - 1 and y2 = befr.st.
 	exp_decay = bayes_model_shape(
 		name = "exp_decay",
 		abbr = "xp",
@@ -42,15 +43,15 @@ bayes_model_shapes <- list(
 			logk = bayes_shape_parameter("k_depth")
 		),
 		priors = list(
-			z1 = list(
-				logL = bayes_prior_normal(log(0.2), 0.8),
-				logA = bayes_prior_normal(log(0.6), 0.7),
+			default = list(
+				logL = bayes_prior_normal(log(0.1), 0.8),
 				logk = bayes_prior_normal(log(1.0), 0.8)
 			),
-			z2 = list(
-				logL = bayes_prior_normal(log(0.2), 0.8),
-				logA = bayes_prior_normal(log(0.7), 0.7),
-				logk = bayes_prior_normal(log(1.0), 0.8)
+			y1m1 = list(
+				logA = bayes_prior_normal(log(0.4), 0.7)
+			),
+			y2 = list(
+				logA = bayes_prior_normal(log(0.4), 0.7)
 			)
 		)
 	),
@@ -65,15 +66,15 @@ bayes_model_shapes <- list(
 			logr0 = bayes_shape_parameter("k_depth")
 		),
 		priors = list(
-			z1 = list(
-				logL = bayes_prior_normal(log(0.2), 0.8),
-				logA = bayes_prior_normal(log(0.6), 0.7),
+			default = list(
+				logL = bayes_prior_normal(log(0.1), 0.8),
 				logr0 = bayes_prior_normal(log(1.0), 0.8)
 			),
-			z2 = list(
-				logL = bayes_prior_normal(log(0.2), 0.8),
-				logA = bayes_prior_normal(log(0.7), 0.7),
-				logr0 = bayes_prior_normal(log(1.0), 0.8)
+			y1m1 = list(
+				logA = bayes_prior_normal(log(0.4), 0.7)
+			),
+			y2 = list(
+				logA = bayes_prior_normal(log(0.4), 0.7)
 			)
 		)
 	),
@@ -87,11 +88,7 @@ bayes_model_shapes <- list(
 			beta = bayes_shape_parameter("k_depth")
 		),
 		priors = list(
-			z1 = list(
-				alpha = bayes_prior_normal(0, 1),
-				beta = bayes_prior_normal(0, 1)
-			),
-			z2 = list(
+			default = list(
 				alpha = bayes_prior_normal(0, 1),
 				beta = bayes_prior_normal(0, 1)
 			)

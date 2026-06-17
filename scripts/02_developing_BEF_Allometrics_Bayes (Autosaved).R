@@ -7,95 +7,29 @@ setwd('/Users/hyli0001/wrd/b/Dynamic_allometrics/')
 system('ls -alt bayes_outputs')
 baydata<-read.table('processed_data/plot_biomass_bayes.txt',sep='\t',head=TRUE)
 library(brms)
-library(loo)
 
-## gausian dist assumption
 ftp_sp<-readRDS("bayes_outputs/exp_decay_ftp_sp_code_rsd_4chn_4000itr_4cor_0.99del_15depth.rds")
 ftp<-readRDS("bayes_outputs/exp_decay_ftp_rsd_4chn_4000itr_4cor_0.99del_15depth.rds")
 sp_c<-readRDS("bayes_outputs/exp_decay_sp_code_rsd_4chn_4000itr_4cor_0.99del_15depth.rds")
 pft_sp<-readRDS("bayes_outputs/exp_decay_PFT_sp_code_rsd_4chn_4000itr_4cor_0.99del_15depth.rds")
 pft<-readRDS("bayes_outputs/exp_decay_PFT_rsd_4chn_4000itr_4cor_0.99del_15depth.rds")
-VarCorr(ftp1)
-VarCorr(ftp0)
 
 
-pp_check(ftp1,resp='y2')
+"exp_decay_log_partial_pool_ftp_sp_code_kdepth0_rsd_student_4chn_4000itr_4cor_0.99del_15depth.rds"
+"exp_decay_log_partial_pool_ftp_sp_code_kdepth1_rsd_student_4chn_4000itr_4cor_0.99del_15depth.rds"
+"exp_decay_log_partial_pool_ftp_sp_code_kdepth2_rsd_student_4chn_4000itr_4cor_0.99del_15depth.rds"
 
-## student dist assumption with logarithm
-ftp0<-readRDS("bayes_outputs/exp_decay_log_partial_pool_ftp_kdepth0_rsd_student_4chn_4000itr_4cor_0.99del_15depth.rds")
-ftp1<-readRDS("bayes_outputs/exp_decay_log_partial_pool_ftp_kdepth1_rsd_student_4chn_4000itr_4cor_0.99del_15depth.rds")
-ftp2<-readRDS("bayes_outputs/exp_decay_ftp_rsd_4chn_4000itr_4cor_0.99del_15depth.rds")
+ftp.sp0<-readRDS("bayes_outputs/xp.ftp.sp_code.coef0.stud.rsd.4.4k.99.15.rds")
+ftp.sp0
 
-exp_decay_log_partial_pool_ftp_sp_code_kdepth0_rsd_student_4chn_4000itr_4cor_0.99del_15depth.rds
+ftp.sp0n<-readRDS("bayes_outputs/exp_decay_log_partial_pool_ftp_sp_code_kdepth0_rsd_student_4chn_4000itr_4cor_0.99del_15depth.rds")
+ftp.sp0n
+source("scripts/00_bayesian_functions.R")
+pp_check(ftp.sp0n,resp='y1')
+pp_check(ftp.sp0,resp='z1')
+bayes_backtransform_response("z1",yrep_z1)
 
-exp_decay_log_partial_pool_ftp_sp_code_kdepth1_rsd_student_4chn_4000itr_4cor_0.99del_15depth.rds
-
-exp_decay_log_partial_pool_ftp_sp_code_kdepth2_rsd_student_4chn_4000itr_4cor_0.99del_15depth.rds
-
-exp_decay_log_partial_pool_sp_code_kdepth0_rsd_student_4chn_4000itr_4cor_0.99del_15depth.rds
-
-exp_decay_log_partial_pool_sp_code_kdepth1_rsd_student_4chn_4000itr_4cor_0.99del_15depth.rds
-
-
-loo_ftp0_y1 <- loo(log_lik(ftp0, resp = "y1"))
-loo_ftp1_y1 <- loo(log_lik(ftp1, resp = "y1"))
-loo_ftp_y1  <- loo(ftp2,  resp = "y1")
-loo_compare(loo_ftp0_y1, loo_ftp1_y1)
-loo_compare(loo_ftp0_y1, loo_ftp_y1)
-
-pred0 <- posterior_epred(ftp0, resp = "y1")
-pred1 <- posterior_epred(ftp1, resp = "y1")
-pred2 <- posterior_epred(ftp2, resp = 'y1')
-dim(pred0)
-hist(pred0[,1],breaks=50)
-pp_check(ftp0, resp='y1')
-
-yhat0 <- colMeans(pred0)
-yhat1 <- colMeans(pred1)
-plot(ftp0$data$y1, yhat0)
-abline(a=0,b=1)
-
-ftp2
-
-pred <- posterior_epred(model)
-RMSE = sqrt(mean((obs - pred)^2))
-
-
-
-summary(ftp)
-ftp_sp0<-readRDS("bayes_outputs/exp_decay_log_partial_pool_ftp_sp_code_kdepth0_rsd_student_4chn_4000itr_4cor_0.99del_15depth.rds")
-ftp_sp1<-readRDS("bayes_outputs/exp_decay_log_partial_pool_ftp_sp_code_kdepth1_rsd_student_4chn_4000itr_4cor_0.99del_15depth.rds")
-ftp_sp2<-readRDS("bayes_outputs/exp_decay_log_partial_pool_ftp_sp_code_kdepth2_rsd_student_4chn_4000itr_4cor_0.99del_15depth.rds")
-
-
-
-pft.k0<-readRDS("bayes_outputs/exp_decay_log_partial_pool_sp_code_kdepth0_rsd_student_4chn_4000itr_4cor_0.99del_15depth.rds")
-summary(pft.k1)
-pft.k1<-readRDS("bayes_outputs/exp_decay_log_partial_pool_sp_code_kdepth1_rsd_student_4chn_4000itr_4cor_0.99del_15depth.rds")
-
-fit1<-brm(pft.k1)
-loo_compare(loo(log_lik(pft.k0,resp='y1')),loo(log_lik(pft.k1,resp='y1')))
-
-loo_k0_y1 <-loo(log_lik(pft.k0,resp='y1'))
-loo_k1_y1 <-loo(log_lik(pft.k1,resp='y1'))
-
-d0_y2 <- pft.k0$data[!is.na(pft.k0$data$y2), ]
-d1_y2 <- pft.k1$data[!is.na(pft.k1$data$y2), ]
-
-loo_k0_y2 <- loo(log_lik(pft.k0, resp = "y2", newdata = d0_y2))
-loo_k1_y2 <- loo(log_lik(pft.k1, resp = "y2", newdata = d1_y2))
-
-loo_k0_y2 <-loo(log_lik(pft.k0,resp='y2'))
-loo_k1_y2 <-loo(log_lik(pft.k1,resp='y2'))
-
-elpd_k0 <- loo_k0_y1$estimates["elpd_loo", "Estimate"] +loo_k0_y2$estimates["elpd_loo", "Estimate"]
-
-elpd_k1 <- loo_k1_y1$estimates["elpd_loo", "Estimate"] +loo_k1_y2$estimates["elpd_loo", "Estimate"]
-
-elpd_k1 - elpd_k0
-
-
-ftp_sp
+ftp.sp0
 summary(ftp_sp)
 summary(pft_sp)
 summary(ftp)
