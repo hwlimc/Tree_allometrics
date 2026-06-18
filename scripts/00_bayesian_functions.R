@@ -31,6 +31,20 @@ bayes_label <- function(values, sep = " / ", none = "none") {
 	paste(values, collapse = sep)
 }
 
+bayes_family_aliases <- c(
+	student = "student",
+	stud = "student",
+	tdis = "student",
+	gamma = "gamma",
+	lognormal = "lognormal",
+	lnorm = "lognormal",
+	gaussian = "gaussian",
+	gausian = "gaussian",
+	gaus = "gaussian",
+	normal = "gaussian",
+	ndis = "gaussian"
+)
+
 bayes_family_key <- function(family) {
 	if (is.character(family)) {
 		family <- family[1]
@@ -39,23 +53,17 @@ bayes_family_key <- function(family) {
 	} else {
 		family <- class(family)[1]
 	}
-	tolower(trimws(as.character(family)[1]))
+	family <- tolower(trimws(as.character(family)[1]))
+	bayes_family_aliases[[family]] %||% family
 }
 
 bayes_parse_family <- function(family) {
 	switch(
 		bayes_family_key(family),
 		student = student(),
-		stud = student(),
-		tdis = student(),
 		gamma = Gamma(link = "identity"),
 		lognormal = lognormal(),
-		lnorm = lognormal(),
 		gaussian = gaussian(),
-		gausian = gaussian(),
-		gaus = gaussian(),
-		normal = gaussian(),
-		ndis = gaussian(),
 		stop(
 			"Unknown family: ", family,
 			". Use 'gamma', 'lognormal'/'lnorm', 'student'/'tdis', or 'gaussian'/'normal'/'ndis'."
@@ -96,13 +104,9 @@ bayes_compact_family_name <- function(family) {
 	switch(
 		family,
 		student = "tdis",
-		stud = "tdis",
-		tdis = "tdis",
+		gamma = "gamma",
+		lognormal = "lnorm",
 		gaussian = "ndis",
-		gausian = "ndis",
-		gaus = "ndis",
-		normal = "ndis",
-		ndis = "ndis",
 		bayes_safe_name(family)
 	)
 }
@@ -112,16 +116,6 @@ bayes_response_parameter_class <- function(family) {
 		bayes_family_key(family),
 		gamma = "shape",
 		"sigma"
-	)
-}
-
-bayes_response_transform_lines <- function(y_1, y_2, response_1 = "y1m1", response_2 = "y2") {
-	c(
-		paste0("Model responses: ", response_1, " and ", response_2),
-		paste0("  ", response_1, " = ", y_1, " - 1"),
-		paste0("  ", y_1, " = ", response_1, " + 1"),
-		paste0("  ", response_2, " = ", y_2),
-		paste0("  ", y_2, " = ", response_2)
 	)
 }
 
@@ -142,9 +136,10 @@ bayes_write_response_transform_file <- function(output_file,
 	lines <- c(
 		paste0("Family: ", bayes_family_key(family)),
 		paste0("Linear predictor: ", mean_expression),
-		bayes_response_transform_lines(y_1, y_2, response_1, response_2),
-		paste0("Original-scale response for ", y_1, ": ", response_1, " + 1"),
-		paste0("Original-scale response for ", y_2, ": ", response_2)
+		paste0(response_1, " = ", y_1, " - 1"),
+		paste0(y_1, " = ", response_1, " + 1"),
+		paste0(response_2, " = ", y_2),
+		paste0(y_2, " = ", response_2)
 	)
 	writeLines(lines, paste0(tools::file_path_sans_ext(output_file), "_transform.txt"))
 	invisible(lines)
@@ -152,10 +147,7 @@ bayes_write_response_transform_file <- function(output_file,
 
 bayes_compact_depth_name <- function(k_hierarchy_depth) {
 	k_hierarchy_depth <- as.integer(k_hierarchy_depth)
-	if (is.na(k_hierarchy_depth)) {
-		return("k0")
-	}
-	if (k_hierarchy_depth == 0) {
+	if (is.na(k_hierarchy_depth) || k_hierarchy_depth == 0) {
 		return("k0")
 	}
 	paste0("k", k_hierarchy_depth)
@@ -300,22 +292,18 @@ bayes_build_priors <- function(shape, responses, hierarchy_depth, k_hierarchy_de
 	priors <- list()
 	parameter_names <- names(shape$parameters)
 	response_class <- bayes_response_parameter_class(family)
+	add_prior <- function(spec, ...) {
+		priors[[length(priors) + 1L]] <<- bayes_make_prior(spec, ...)
+	}
 
 	for (response in responses) {
 		for (parameter in parameter_names) {
-			priors[[length(priors) + 1L]] <- bayes_make_prior(
-				bayes_shape_parameter_prior(shape, response, parameter),
-				nlpar = parameter,
-				resp = response
-			)
+			prior_spec <- bayes_shape_parameter_prior(shape, response, parameter)
+			add_prior(prior_spec, nlpar = parameter, resp = response)
 		}
 
 		if (!is.null(shape$response_priors$sigma)) {
-			priors[[length(priors) + 1L]] <- bayes_make_prior(
-				shape$response_priors$sigma,
-				class = response_class,
-				resp = response
-			)
+			add_prior(shape$response_priors$sigma, class = response_class, resp = response)
 		}
 	}
 
@@ -323,12 +311,7 @@ bayes_build_priors <- function(shape, responses, hierarchy_depth, k_hierarchy_de
 		depth <- bayes_parameter_depth(shape$parameters[[parameter]], hierarchy_depth, k_hierarchy_depth)
 		if (depth > 0 && !is.null(shape$parameters[[parameter]]$sd_prior)) {
 			for (response in responses) {
-				priors[[length(priors) + 1L]] <- bayes_make_prior(
-					shape$parameters[[parameter]]$sd_prior,
-					class = "sd",
-					nlpar = parameter,
-					resp = response
-				)
+				add_prior(shape$parameters[[parameter]]$sd_prior, class = "sd", nlpar = parameter, resp = response)
 			}
 		}
 	}

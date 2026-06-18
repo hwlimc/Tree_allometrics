@@ -31,6 +31,17 @@ bayes_model_shape <- function(name,
 	)
 }
 
+bayes_curve_priors <- function(tail_parameter, tail_mean, tail_sd, logA_mean, logA_sd, logL_mean = log(0.1), logL_sd = 0.8) {
+	default <- list(logL = bayes_prior_normal(logL_mean, logL_sd))
+	default[[tail_parameter]] <- bayes_prior_normal(tail_mean, tail_sd)
+
+	list(
+		default = default,
+		y1m1 = list(logA = bayes_prior_normal(logA_mean, logA_sd)),
+		y2 = list(logA = bayes_prior_normal(logA_mean, logA_sd))
+	)
+}
+
 bayes_model_shapes <- list(
 	# Original-scale models use y1m1 = befa.st - 1 and y2 = befr.st.
 	exp_decay = bayes_model_shape(
@@ -42,18 +53,7 @@ bayes_model_shapes <- list(
 			logA = bayes_shape_parameter("full"),
 			logk = bayes_shape_parameter("k_depth")
 		),
-		priors = list(
-			default = list(
-				logL = bayes_prior_normal(log(0.1), 0.8),
-				logk = bayes_prior_normal(log(1.0), 0.8)
-			),
-			y1m1 = list(
-				logA = bayes_prior_normal(log(0.4), 0.7)
-			),
-			y2 = list(
-				logA = bayes_prior_normal(log(0.4), 0.7)
-			)
-		)
+		priors = bayes_curve_priors("logk", log(1.0), 0.8, log(0.4), 0.7)
 	),
 
 	michaelis_menten = bayes_model_shape(
@@ -65,18 +65,7 @@ bayes_model_shapes <- list(
 			logA = bayes_shape_parameter("full"),
 			logr0 = bayes_shape_parameter("k_depth")
 		),
-		priors = list(
-			default = list(
-				logL = bayes_prior_normal(log(0.1), 0.8),
-				logr0 = bayes_prior_normal(log(1.0), 0.8)
-			),
-			y1m1 = list(
-				logA = bayes_prior_normal(log(0.4), 0.7)
-			),
-			y2 = list(
-				logA = bayes_prior_normal(log(0.4), 0.7)
-			)
-		)
+		priors = bayes_curve_priors("logr0", log(1.0), 0.8, log(0.4), 0.7)
 	),
 
 	linear = bayes_model_shape(
