@@ -91,21 +91,7 @@ if (has_split) {
 	}
 }
 
-family_obj <- switch(
-	family_arg,
-	student = student(),
-	stud = student(),
-	tdis = student(),
-	gamma = Gamma(link = "identity"),
-	lognormal = lognormal(),
-	lnorm = lognormal(),
-	gaussian = gaussian(),
-	gausian = gaussian(),
-	gaus = gaussian(),
-	normal = gaussian(),
-	ndis = gaussian(),
-	stop("Unknown family: ", family_arg, ". Use 'lognormal'/'lnorm', 'gamma', 'student'/'tdis', or 'gaussian'/'normal'/'ndis'.")
-)
+family_obj <- bayes_parse_family(family_arg)
 
 fit_model <- function(data, hierarchy, file_suffix = NULL) {
 	Bef_bayes_fit_model_shape(
