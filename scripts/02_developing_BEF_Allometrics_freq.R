@@ -163,13 +163,3 @@ plot(wb.scale~sdi,bp)
 
 
 
-
-
-
-
-
-
-library(brms)
-library(cmdstanr)
-
-source('scripts/00_bayesian_functions.R')

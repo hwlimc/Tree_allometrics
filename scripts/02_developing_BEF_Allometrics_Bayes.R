@@ -12,29 +12,53 @@ out_dir <- file.path("bayes_outputs", "bef_bayes", run_id)
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 
 # ---- model-list ----
-model_info <- data.frame(
-  model = c(
-    "base_k0",
-    "ftp_k0",
-    "ftp_k1",
-    "sp_k0",
-    "sp_k1",
-    "ftp_sp_k0",
-    "ftp_sp_k1",
-    "ftp_sp_k2"
-  ),
-  model_file = c(
-    "bayes_outputs/xp_none_k0_gamma_rsd_4-4k-99-15.rds",
-    "bayes_outputs/xp_ftp_k0_gamma_rsd_4-4k-99-15.rds",
-    "bayes_outputs/xp_ftp_k1_gamma_rsd_4-4k-99-15.rds",
-    "bayes_outputs/xp_sp_code_k0_gamma_rsd_4-4k-99-15.rds",
-    "bayes_outputs/xp_sp_code_k1_gamma_rsd_4-4k-99-15.rds",
-    "bayes_outputs/xp_ftp-sp_code_k0_gamma_rsd_4-4k-99-15.rds",
-    "bayes_outputs/xp_ftp-sp_code_k1_gamma_rsd_4-4k-99-15.rds",
-    "bayes_outputs/xp_ftp-sp_code_k2_gamma_rsd_4-4k-99-15.rds"
-  ),
-  stringsAsFactors = FALSE
-)
+model_dir <- "bayes_outputs"
+model_file_pattern <- "^xp_(.+)_(gamma|lognormal|stud|student)_rsd_4-4k-99-15[.]rds$"
+
+family_label <- function(family) {
+  family <- tolower(family)
+  ifelse(family %in% c("stud", "student"), "student", family)
+}
+
+model_structure_label <- function(structure_key) {
+  out <- gsub("-", "_", structure_key)
+  out <- gsub("sp_code", "sp", out)
+  out[out == "none_k0"] <- "base_k0"
+  out
+}
+
+discover_model_info <- function(model_dir) {
+  files <- list.files(model_dir, pattern = "[.]rds$", full.names = TRUE)
+  file_names <- basename(files)
+  match_data <- regmatches(file_names, regexec(model_file_pattern, file_names))
+  keep <- lengths(match_data) > 0
+
+  if (!any(keep)) {
+    stop("No Bayesian model .rds files found in ", model_dir)
+  }
+
+  match_data <- match_data[keep]
+  structure_key <- vapply(match_data, `[[`, character(1), 2)
+  family <- family_label(vapply(match_data, `[[`, character(1), 3))
+  model_structure <- model_structure_label(structure_key)
+  k_depth <- sub("^.*_(k[0-9]+)$", "\\1", structure_key)
+  hierarchy <- sub("_[kK][0-9]+$", "", structure_key)
+  hierarchy[hierarchy == "none"] <- "base"
+
+  out <- data.frame(
+    model = paste(model_structure, family, sep = "_"),
+    model_structure = model_structure,
+    family = family,
+    hierarchy = hierarchy,
+    k_depth = k_depth,
+    model_file = files[keep],
+    stringsAsFactors = FALSE
+  )
+
+  out[order(out$model_structure, out$family), ]
+}
+
+model_info <- discover_model_info(model_dir)
 
 missing_files <- model_info$model_file[!file.exists(model_info$model_file)]
 if (length(missing_files) > 0) {
@@ -58,15 +82,55 @@ write_txt <- function(x, file) {
 }
 
 add_model <- function(df, model) {
-  data.frame(model = model, df, row.names = NULL)
+  i <- match(model, model_info$model)
+  data.frame(
+    model = model,
+    model_structure = model_info$model_structure[i],
+    family = model_info$family[i],
+    df,
+    row.names = NULL
+  )
 }
 
-resp_label <- function(resp) {
-  if (identical(resp, "y1m1")) "befa.st" else "befr.st"
+response_info_for_fit <- function(fit) {
+  data_names <- names(fit$data)
+
+  if (all(c("y1m1", "y2") %in% data_names)) {
+    return(data.frame(
+      resp = c("y1m1", "y2"),
+      response = c("befa.st", "befr.st"),
+      transform = c("shift_y1m1", "identity"),
+      jacobian_log_response = c(FALSE, FALSE),
+      stringsAsFactors = FALSE
+    ))
+  }
+
+  if (all(c("z1", "z2") %in% data_names)) {
+    return(data.frame(
+      resp = c("z1", "z2"),
+      response = c("befa.st", "befr.st"),
+      transform = c("log_y1m1", "log_y2"),
+      jacobian_log_response = c(TRUE, TRUE),
+      stringsAsFactors = FALSE
+    ))
+  }
+
+  stop("Unknown response columns in fit$data: ", paste(data_names, collapse = ", "))
 }
 
-backtransform <- function(resp, x) {
-  if (identical(resp, "y1m1")) x + 1 else x
+resp_label <- function(resp_info) {
+  resp_info$response[[1]]
+}
+
+backtransform <- function(resp_info, x) {
+  switch(
+    resp_info$transform[[1]],
+    shift_y1m1 = x + 1,
+    identity = x,
+    log_y1m1 = exp(x) + 1,
+    log_y2 = exp(x),
+    stop("Unknown response transform: ", resp_info$transform[[1]])
+  )
 }
 
 safe_max <- function(x) {
@@ -90,18 +154,18 @@ run_by_model <- function(fun) {
 }
 
 run_by_model_response <- function(fun) {
-  do.call(
-    rbind,
-    unlist(
-      Map(function(fit, model) {
-        list(
-          fun(fit, model, "y1m1"),
-          fun(fit, model, "y2")
-        )
-      }, fits, model_info$model),
-      recursive = FALSE
-    )
-  )
+  out <- list()
+  k <- 1L
+
+  for (i in seq_along(fits)) {
+    resp_info <- response_info_for_fit(fits[[i]])
+    for (j in seq_len(nrow(resp_info))) {
+      out[[k]] <- fun(fits[[i]], model_info$model[[i]], resp_info[j, , drop = FALSE])
+      k <- k + 1L
+    }
+  }
+
+  do.call(rbind, out)
 }
 
 plot_grid <- function(n) {
@@ -126,11 +190,16 @@ chain_id_for_fit <- function(fit, ndraws) {
   rep(seq_len(nchains), each = ndraws / nchains)
 }
 
-compute_loo <- function(fit, resp, newdata) {
+compute_loo <- function(fit, resp_info, newdata) {
+  resp <- resp_info$resp[[1]]
   log_lik_matrix <- log_lik(fit, resp = resp, newdata = newdata)
 
   if (anyNA(log_lik_matrix)) {
     stop("NA values found in log-likelihood for response ", resp)
+  }
+
+  if (isTRUE(resp_info$jacobian_log_response[[1]])) {
+    log_lik_matrix <- sweep(log_lik_matrix, 2, newdata[[resp]], "-")
   }
 
   chain_id <- chain_id_for_fit(fit, nrow(log_lik_matrix))
@@ -188,7 +257,7 @@ step1
 # ---- step-2-posterior ----
 get_posteriors <- function(fit, model) {
   s <- summarise_draws(as_draws_df(fit))
-  s <- s[grepl("^(b_|sd_|shape_)", s$variable), ]
+  s <- s[grepl("^(b_|sd_|shape_|sigma_|nu_)", s$variable), ]
 
   keep <- intersect(
     c("variable", "mean", "median", "sd", "mad", "q5", "q95"),
@@ -203,9 +272,10 @@ write_txt(step2, "02_posterior_parameter_summary.txt")
 head(step2)
 
 # ---- step-3-ppcheck-data ----
-get_ppc_yrep <- function(fit, model, resp, ndraws = 1000) {
+get_ppc_yrep <- function(fit, model, resp_info, ndraws = 1000) {
+  resp <- resp_info$resp[[1]]
   dat <- fit$data[!is.na(fit$data[[resp]]), , drop = FALSE]
-  obs <- backtransform(resp, dat[[resp]])
+  obs <- backtransform(resp_info, dat[[resp]])
 
   yrep <- posterior_predict(
     fit,
@@ -213,7 +283,7 @@ get_ppc_yrep <- function(fit, model, resp, ndraws = 1000) {
     resp = resp,
     ndraws = ndraws
   )
-  yrep <- backtransform(resp, yrep)
+  yrep <- backtransform(resp_info, yrep)
 
   yrep_median <- apply(yrep, 2, median)
   yrep_q05 <- apply(yrep, 2, quantile, 0.05)
@@ -224,7 +294,7 @@ get_ppc_yrep <- function(fit, model, resp, ndraws = 1000) {
   pp_p_two_tail <- 2 * pmin(pp_p_upper, 1 - pp_p_upper)
 
   out <- data.frame(
-    response = resp_label(resp),
+    response = resp_label(resp_info),
     row_id = seq_len(nrow(dat)),
     x = dat$x,
     observed = obs,
@@ -250,6 +320,8 @@ head(step3_yrep)
 summarize_ppcheck <- function(d) {
   data.frame(
     model = d$model[1],
+    model_structure = d$model_structure[1],
+    family = d$family[1],
     response = d$response[1],
     n = nrow(d),
     observed_mean = mean(d$observed, na.rm = TRUE),
@@ -274,9 +346,10 @@ write_txt(step3_summary, "03_ppcheck_observed_yrep_summary.txt")
 step3_summary
 
 # ---- step-3-ppcheck-density-plot ----
-plot_ppc_density_one <- function(fit, model, resp, ndraws = 50) {
+plot_ppc_density_one <- function(fit, model, resp_info, ndraws = 50) {
+  resp <- resp_info$resp[[1]]
   dat <- fit$data[!is.na(fit$data[[resp]]), , drop = FALSE]
-  obs <- backtransform(resp, dat[[resp]])
+  obs <- backtransform(resp_info, dat[[resp]])
 
   yrep <- posterior_predict(
     fit,
@@ -284,7 +357,7 @@ plot_ppc_density_one <- function(fit, model, resp, ndraws = 50) {
     resp = resp,
     ndraws = ndraws
   )
-  yrep <- backtransform(resp, yrep)
+  yrep <- backtransform(resp_info, yrep)
 
   obs_den <- density(obs, na.rm = TRUE)
   yrep_den <- lapply(seq_len(nrow(yrep)), function(i) density(yrep[i, ], na.rm = TRUE))
@@ -295,8 +368,8 @@ plot_ppc_density_one <- function(fit, model, resp, ndraws = 50) {
     lwd = 2,
     col = "black",
     ylim = y_lim,
-    xlab = resp_label(resp),
-    main = paste(resp_label(resp), model, sep = " | ")
+    xlab = resp_label(resp_info),
+    main = paste(resp_label(resp_info), model, sep = " | ")
   )
 
   for (i in seq_along(yrep_den)) {
@@ -317,34 +390,37 @@ pdf(file.path(out_dir, "03_ppcheck_density_observed_yrep.pdf"), width = 12, heig
 old_par <- par(no.readonly = TRUE)
 layout_dim <- plot_grid(length(fits))
 
-for (resp in c("y1m1", "y2")) {
+for (response_name in c("befa.st", "befr.st")) {
   par(
     mfrow = c(layout_dim["nrow"], layout_dim["ncol"]),
     mar = c(4, 4, 3, 1),
     oma = c(0, 0, 2, 0)
   )
 
-  for (mod in names(fits)) {
-    plot_ppc_density_one(fits[[mod]], mod, resp)
+  for (i in seq_along(fits)) {
+    resp_info <- response_info_for_fit(fits[[i]])
+    resp_info <- resp_info[resp_info$response == response_name, , drop = FALSE]
+    plot_ppc_density_one(fits[[i]], model_info$model[[i]], resp_info)
   }
 
-  mtext(paste("Density PPC:", resp_label(resp)), outer = TRUE, cex = 1.2)
+  mtext(paste("Density PPC:", response_name), outer = TRUE, cex = 1.2)
 }
 
 par(old_par)
 dev.off()
 
 # ---- step-4-observed-predicted-data ----
-get_obs_pred <- function(fit, model, resp) {
+get_obs_pred <- function(fit, model, resp_info) {
+  resp <- resp_info$resp[[1]]
   dat <- fit$data[!is.na(fit$data[[resp]]), , drop = FALSE]
   pred <- fitted(fit, newdata = dat, resp = resp)[, "Estimate"]
 
   out <- data.frame(
-    response = resp_label(resp),
+    response = resp_label(resp_info),
     row_id = seq_len(nrow(dat)),
     x = dat$x,
-    observed = backtransform(resp, dat[[resp]]),
-    predicted = backtransform(resp, pred),
+    observed = backtransform(resp_info, dat[[resp]]),
+    predicted = backtransform(resp_info, pred),
     stringsAsFactors = FALSE
   )
 
@@ -394,14 +470,15 @@ par(old_par)
 dev.off()
 
 # ---- step-5-loo ----
-get_loo <- function(fit, model, resp) {
+get_loo <- function(fit, model, resp_info) {
+  resp <- resp_info$resp[[1]]
   dat <- fit$data[!is.na(fit$data[[resp]]), , drop = FALSE]
-  lo <- compute_loo(fit, resp = resp, newdata = dat)
+  lo <- compute_loo(fit, resp_info = resp_info, newdata = dat)
   est <- lo$estimates
   pk <- pareto_k_values(lo)
 
   out <- data.frame(
-    response = resp_label(resp),
+    response = resp_label(resp_info),
     n = nrow(dat),
     elpd_loo = est["elpd_loo", "Estimate"],
     elpd_loo_se = est["elpd_loo", "SE"],
@@ -424,7 +501,8 @@ step5
 
 # ---- step-5-total-ranking ----
 step5_total <- aggregate(
-  cbind(elpd_loo, p_loo, looic, n, n_pareto_k_gt_0.7, n_pareto_k_gt_1.0) ~ model,
+  cbind(elpd_loo, p_loo, looic, n, n_pareto_k_gt_0.7, n_pareto_k_gt_1.0) ~
+    model + model_structure + family,
   data = step5,
   FUN = sum
 )
@@ -432,13 +510,24 @@ step5_total <- aggregate(
 step5_total$max_pareto_k <- tapply(step5$max_pareto_k, step5$model, max, na.rm = TRUE)[step5_total$model]
 step5_total$elpd_diff_from_best <- step5_total$elpd_loo - max(step5_total$elpd_loo)
 step5_total$looic_diff_from_best <- step5_total$looic - min(step5_total$looic)
+step5_total$elpd_diff_from_structure_best <- ave(
+  step5_total$elpd_loo,
+  step5_total$model_structure,
+  FUN = function(x) x - max(x)
+)
+step5_total$looic_diff_from_structure_best <- ave(
+  step5_total$looic,
+  step5_total$model_structure,
+  FUN = function(x) x - min(x)
+)
 step5_total <- step5_total[order(-step5_total$elpd_loo), ]
 
 write_txt(step5_total, "05_loo_total_ranking.txt")
 step5_total
 
 # ---- step-5-response-rsd-data ----
-get_response_curve <- function(fit, model, resp, n_grid = 100) {
+get_response_curve <- function(fit, model, resp_info, n_grid = 100) {
+  resp <- resp_info$resp[[1]]
   dat <- fit$data[!is.na(fit$data[[resp]]), , drop = FALSE]
   x_grid <- seq(min(dat$x, na.rm = TRUE), max(dat$x, na.rm = TRUE), length.out = n_grid)
   newdat <- data.frame(x = x_grid)
@@ -459,19 +548,19 @@ get_response_curve <- function(fit, model, resp, n_grid = 100) {
   )
 
   obs <- add_model(data.frame(
-    response = resp_label(resp),
+    response = resp_label(resp_info),
     row_id = seq_len(nrow(dat)),
     x = dat$x,
-    observed = backtransform(resp, dat[[resp]]),
+    observed = backtransform(resp_info, dat[[resp]]),
     stringsAsFactors = FALSE
   ), model)
 
   curve <- add_model(data.frame(
-    response = resp_label(resp),
+    response = resp_label(resp_info),
     x = x_grid,
-    predicted = backtransform(resp, pred[, "Estimate"]),
-    pred_q05 = backtransform(resp, pred[, "Q5"]),
-    pred_q95 = backtransform(resp, pred[, "Q95"]),
+    predicted = backtransform(resp_info, pred[, "Estimate"]),
+    pred_q05 = backtransform(resp_info, pred[, "Q5"]),
+    pred_q95 = backtransform(resp_info, pred[, "Q95"]),
     stringsAsFactors = FALSE
   ), model)
 
@@ -480,10 +569,10 @@ get_response_curve <- function(fit, model, resp, n_grid = 100) {
 
 curve_list <- unlist(
   Map(function(fit, model) {
-    list(
-      get_response_curve(fit, model, "y1m1"),
-      get_response_curve(fit, model, "y2")
-    )
+    resp_info <- response_info_for_fit(fit)
+    lapply(seq_len(nrow(resp_info)), function(i) {
+      get_response_curve(fit, model, resp_info[i, , drop = FALSE])
+    })
   }, fits, model_info$model),
   recursive = FALSE
 )

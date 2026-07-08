@@ -43,9 +43,9 @@ input_manifest <- wf$manifest
 input_manifest$model_time <- format(as.POSIXct(input_manifest$model_time), "%Y-%m-%d %H:%M:%S")
 
 knitr::kable(
-  input_manifest[, c("model", "model_file", "model_time", "n_rows")],
-  col.names = c("Model", "File", "File time", "Rows"),
-  align = c("l", "l", "l", "r")
+  input_manifest[, c("model", "model_structure", "family", "hierarchy", "k_depth", "model_file", "model_time", "n_rows")],
+  col.names = c("Model", "Structure", "Family", "Hierarchy", "k depth", "File", "File time", "Rows"),
+  align = c("l", "l", "l", "l", "l", "l", "l", "r")
 )
 ```
 
@@ -53,7 +53,7 @@ knitr::kable(
 
 ```{r diagnostics}
 diag_tbl <- wf$step1[, c(
-  "model", "divergences", "max_treedepth", "max_rhat",
+  "model", "model_structure", "family", "divergences", "max_treedepth", "max_rhat",
   "max_rhat_parameter", "min_bulk_ess", "min_bulk_ess_parameter",
   "min_tail_ess", "min_tail_ess_parameter"
 )]
@@ -61,7 +61,7 @@ diag_tbl <- wf$step1[, c(
 knitr::kable(
   diag_tbl,
   digits = 3,
-  align = c("l", "r", "r", "r", "l", "r", "l", "r", "l")
+  align = c("l", "l", "l", "r", "r", "r", "l", "r", "l", "r", "l")
 )
 ```
 
@@ -69,17 +69,22 @@ knitr::kable(
 
 ```{r posterior-summaries}
 post_tbl <- wf$step2
-post_tbl <- post_tbl[post_tbl$variable %in% c(
-  "b_y1m1_logL_Intercept", "b_y1m1_logA_Intercept", "b_y1m1_logk_Intercept",
-  "b_y2_logL_Intercept", "b_y2_logA_Intercept", "b_y2_logk_Intercept",
-  "sd_h1__y1m1_logL_Intercept", "sd_h1__y1m1_logA_Intercept",
-  "sd_h1__y2_logL_Intercept", "sd_h1__y2_logA_Intercept"
+post_tbl <- post_tbl[grepl(
+  paste(
+    "^b_(y1m1|y2|z1|z2)_log(L|A|k)_Intercept$",
+    "^sd_h[12]__(y1m1|y2|z1|z2)_log(L|A|k)_Intercept$",
+    "^shape_(y1m1|y2)$",
+    "^sigma_(y1m1|y2|z1|z2)$",
+    "^nu_(z1|z2)$",
+    sep = "|"
+  ),
+  post_tbl$variable
 ), ]
 
 knitr::kable(
-  post_tbl[, c("model", "variable", "mean", "median", "sd", "q5", "q95")],
+  post_tbl[, c("model", "model_structure", "family", "variable", "mean", "median", "sd", "q5", "q95")],
   digits = 4,
-  align = c("l", "l", "r", "r", "r", "r", "r")
+  align = c("l", "l", "l", "l", "r", "r", "r", "r", "r")
 )
 ```
 
@@ -91,27 +96,32 @@ The next table compares observed values with posterior predictive draws on the o
 pp_tbl <- wf$step3_summary
 knitr::kable(
   pp_tbl[, c(
-    "model", "response", "n", "observed_mean", "yrep_median_mean",
+    "model", "model_structure", "family", "response", "n", "observed_mean", "yrep_median_mean",
     "mean_residual", "rmse", "mean_abs_std_residual",
     "prop_outside_yrep90", "prop_pp_twotail_lt_0.10", "prop_pp_twotail_lt_0.05"
   )],
   digits = 4,
-  align = c("l", "l", "r", "r", "r", "r", "r", "r", "r", "r", "r")
+  align = c("l", "l", "l", "l", "r", "r", "r", "r", "r", "r", "r", "r", "r")
 )
 ```
 
 # Model Comparison
 
+Gamma and lognormal fits use the positive response scale directly. Student fits
+saved with `z1`/`z2` use log-transformed responses, so their pointwise
+log-likelihoods are Jacobian-adjusted before LOO comparison.
+
 ```{r loo-ranking}
 loo_tbl <- wf$step5_total
 knitr::kable(
   loo_tbl[, c(
-    "model", "elpd_loo", "p_loo", "looic", "max_pareto_k",
+    "model", "model_structure", "family", "elpd_loo", "p_loo", "looic", "max_pareto_k",
     "n_pareto_k_gt_0.7", "n_pareto_k_gt_1.0", "elpd_diff_from_best",
-    "looic_diff_from_best"
+    "looic_diff_from_best", "elpd_diff_from_structure_best",
+    "looic_diff_from_structure_best"
   )],
   digits = 3,
-  align = c("l", "r", "r", "r", "r", "r", "r", "r", "r")
+  align = c("l", "l", "l", "r", "r", "r", "r", "r", "r", "r", "r", "r", "r")
 )
 ```
 
