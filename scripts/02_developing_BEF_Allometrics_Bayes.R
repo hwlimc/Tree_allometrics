@@ -7,14 +7,333 @@ setwd('/Users/hyli0001/wrd/b/Dynamic_allometrics/')
 system('ls -alt bayes_outputs')
 baydata<-read.table('processed_data/plot_biomass_bayes.txt',sep='\t',head=TRUE)
 library(brms)
+library(posterior)
+library(loo)
 
-ftp_sp<-readRDS("bayes_outputs/exp_decay_ftp_sp_code_rsd_4chn_4000itr_4cor_0.99del_15depth.rds")
-ftp<-readRDS("bayes_outputs/exp_decay_ftp_rsd_4chn_4000itr_4cor_0.99del_15depth.rds")
+run_id <- format(Sys.time(), "%Y%m%d_%H%M")
+out_dir <- file.path("bayes_outputs","xp_gamma_workflow", run_id)
+dir.create(out_dir, recursive = TRUE, showWarnings =FALSE)
+
+model_info <- data.frame(model = c("base_k0","ftp_k0", "ftp_k1", "sp_k0", "sp_k1","ftp_sp_k0","ftp_sp_k1","ftp_sp_k2"),
+    model_file = c(
+    "bayes_outputs/xp_none_k0_gamma_rsd_4-4k-99-15.rds"
+    "bayes_outputs/xp_ftp_k0_gamma_rsd_4-4k-99-15.rds",
+    "bayes_outputs/xp_ftp_k1_gamma_rsd_4-4k-99-15.rds",
+    "bayes_outputs/xp_sp_code_k0_gamma_rsd_4-4k-99-15.rds",
+    "bayes_outputs/xp_sp_code_k1_gamma_rsd_4-4k-99-15.rds",
+    "bayes_outputs/xp_ftp-sp_code_k0_gamma_rsd_4-4k-99-15.rds",
+    "bayes_outputs/xp_ftp-sp_code_k1_gamma_rsd_4-4k-99-15.rds",
+    "bayes_outputs/xp_ftp-sp_code_k2_gamma_rsd_4-4k-99-15.rds"),
+    stringsAsFactors = FALSE)
+
+
+model_info$model_time<-as.character(file.info(model_info$model_file)$mtime)
+model_info$model_file_size<-file.info(model_info$model_file)$size
+fits<-setNames(lapply(model_info$model_file, readRDS),model_info$model)
+
+write_txt <- function(x, file) {
+    write.table(x, file.path(out_dir, file), sep = "\t",
+    quote = FALSE, row.names = FALSE)}
+
+add_meta <- function(df, model, model_file, model_time)
+  {data.frame(
+      run_id = run_id,
+      model = model,
+      model_file = model_file,
+      model_time = model_time,
+      df,
+      row.names = NULL
+    )
+  }
+
+resp_label <- function(resp) if (resp == "y1m1") "befa.st" else "befr.st"
+backtransform <- function(resp, x) if (resp == "y1m1") x+1 else x
+run_by_model <- function(fun) {
+	do.call(rbind, Map(fun, fits, model_info$model,model_info$model_file, model_info$model_time))}
+
+run_by_model_response <- function(fun) {
+	do.call(rbind, unlist(
+		Map(function(fit, model, file,time) {
+      list(fun(fit, model, file, time, "y1m1"),fun(fit, model, file, time, "y2"))}, 
+      fits, model_info$model, model_info$model_file,model_info$model_time),
+      recursive = FALSE))}
+
+manifest <- data.frame(
+    run_id = run_id,
+    run_generated_at = run_generated_at,
+    model_info,
+    n_rows = sapply(fits, function(x) nrow(x$data)))
+write_txt(manifest, "00_model_manifest.txt")
+
+#### STEP 1: MCMC diagnostics
+get_mcmc <- function(fit, model, model_file, model_time)
+  {np <- nuts_params(fit)
+    s <- summarise_draws(as_draws_df(fit))
+    s <- s[!grepl("^Ymi_", s$variable), ]
+    out <- data.frame(
+      divergences = sum(np$Parameter == "divergent__" &
+      np$Value == 1),
+      max_treedepth = max(np$Value[np$Parameter ==
+      "treedepth__"], na.rm = TRUE),
+      max_rhat = max(s$rhat, na.rm = TRUE),
+      min_bulk_ess = min(s$ess_bulk, na.rm = TRUE),
+      min_tail_ess = min(s$ess_tail, na.rm = TRUE))
+
+    add_meta(out, model, model_file, model_time)}
+
+step1 <- run_by_model(get_mcmc)
+write_txt(step1, "01_mcmc_diagnostics.txt")
+
+## STEP 2: Posterior parameter summaries
+
+get_posteriors <- function(fit, model, model_file, model_time) {
+    s <- summarise_draws(as_draws_df(fit))
+    s <- s[grepl("^(b_|sd_|shape_)", s$variable), ]
+    add_meta(s, model, model_file, model_time)}
+
+step2 <- run_by_model(get_posteriors)
+write_txt(step2, "02_posterior_parameter_summary.txt")
+
+## STEP 3: Posterior predictive checks
+get_ppc <- function(fit, model, model_file, model_time, resp, ndraws = 1000) {
+    dat <- fit$data[!is.na(fit$data[[resp]]), , drop=FALSE]
+    obs <- backtransform(resp, dat[[resp]])
+    yrep <- backtransform(resp, posterior_predict(fit, newdata = dat, resp = resp, ndraws = ndraws))
+
+    stat_names <- c("mean", "sd", "median", "q05", "q95", "max")
+    stat_value <- function(x, stat) {
+      switch(stat,
+        mean = mean(x, na.rm = TRUE),
+        sd = sd(x, na.rm = TRUE),
+        median = median(x, na.rm = TRUE),
+        q05 = quantile(x, 0.05, na.rm = TRUE),
+        q95 = quantile(x, 0.95, na.rm = TRUE),
+        max = max(x, na.rm = TRUE))}
+
+    out <- do.call(rbind, lapply(stat_names,
+    function(stat) {
+      pred_stat <- apply(yrep, 1, stat_value, stat = stat)
+      data.frame(
+        response = resp_label(resp),
+        stat = stat,
+        observed = as.numeric(stat_value(obs, stat)),
+        pred_median = median(pred_stat),
+        pred_q05 = quantile(pred_stat, 0.05),
+        pred_q95 = quantile(pred_stat, 0.95)
+      )
+    }))
+
+    add_meta(out, model, model_file, model_time)
+  }
+
+step3 <- run_by_model_response(get_ppc)
+write_txt(step3, "03_posterior_predictive_stats.txt")
+
+## STEP 4: Observed versus predicted
+get_obs_pred <- function(fit, model, model_file,model_time, resp) {
+    dat <- fit$data[!is.na(fit$data[[resp]]), , drop=FALSE]
+    pred <- fitted(fit, newdata = dat, resp = resp)[,"Estimate"]
+    out <- data.frame(
+      response = resp_label(resp),
+      row_id = seq_len(nrow(dat)),
+      x = dat$x,
+      observed = backtransform(resp, dat[[resp]]),
+      predicted = backtransform(resp, pred))
+    out$residual <- out$observed - out$predicted
+    add_meta(out, model, model_file, model_time)}
+
+step4 <- run_by_model_response(get_obs_pred)
+write_txt(step4, "04_observed_vs_predicted.txt")
+
+pdf(file.path(out_dir, "04_observed_vs_predicted.pdf"),
+width = 12, height = 7)
+old_par <- par(no.readonly = TRUE)
+
+for (resp in c("befa.st", "befr.st")) {
+    par(mfrow = c(2, 4), mar = c(4, 4, 3, 1), oma = c(0,
+    0, 2, 0))
+    for (mod in names(fits)) {
+      d <- step4[step4$response == resp & step4$model ==
+      mod, ]
+      lim <- range(c(d$observed, d$predicted), na.rm =
+      TRUE)
+
+      plot(d$observed, d$predicted,
+        xlim = lim, ylim = lim,
+        pch = 16, col = rgb(0, 0, 0, 0.35),
+        xlab = "Observed", ylab = "Predicted",
+        main = paste(resp, mod, sep = " | ")
+      )
+      abline(0, 1, col = "red", lwd = 2)
+    }
+
+    plot.new()
+    mtext(paste("Observed vs predicted:", resp), outer =
+    TRUE, cex = 1.2)
+  }
+
+  par(old_par)
+  dev.off()
+
+### STEP 5: PSIS-LOO and response-rsd curves
+get_loo <- function(fit, model, model_file, model_time, resp) {
+    dat <- fit$data[!is.na(fit$data[[resp]]), , drop=FALSE]
+    lo <- loo(fit, resp = resp, newdata = dat)
+    est <- lo$estimates
+    pk <- pareto_k_values(lo)
+    out <- data.frame(
+      response = resp_label(resp),
+      n = nrow(dat),
+      elpd_loo = est["elpd_loo", "Estimate"],
+      elpd_loo_se = est["elpd_loo", "SE"],
+      p_loo = est["p_loo", "Estimate"],
+      looic = est["looic", "Estimate"],
+      looic_se = est["looic", "SE"],
+      max_pareto_k = max(pk),
+      n_pareto_k_gt_0.7 = sum(pk > 0.7),
+      n_pareto_k_gt_1.0 = sum(pk > 1.0))
+  add_meta(out, model, model_file, model_time)
+  }
+
+step5 <- run_by_model_response(get_loo)
+step5 <- step5[order(step5$response, -step5$elpd_loo), ]
+write_txt(step5, "05_loo_metrics_by_response.txt")
+
+step5_total <- aggregate(
+    cbind(elpd_loo, p_loo, looic, n, n_pareto_k_gt_0.7,n_pareto_k_gt_1.0) ~ model,
+    data = step5,
+    FUN = sum)
+step5_total$max_pareto_k <- tapply(step5$max_pareto_k,step5$model, max)[step5_total$model]
+step5_total$elpd_diff_from_best <- step5_total$elpd_loo-max(step5_total$elpd_loo)
+step5_total$looic_diff_from_best <- step5_total$looic-min(step5_total$looic)
+step5_total <- merge(model_info[, c("model","model_file", "model_time")], step5_total, by = "model")
+step5_total<-step5_total[order(-step5_total$elpd_loo), ]
+step5_total<-data.frame(run_id, run_generated_at,step5_total)
+
+write_txt(step5_total, "05_loo_total_ranking.txt")
+
+get_response_curve <- function(fit, model, model_file,model_time, resp, n_grid = 100) {
+    dat <- fit$data[!is.na(fit$data[[resp]]), , drop =FALSE]
+    x_grid <- seq(min(dat$x, na.rm = TRUE), max(dat$x,na.rm = TRUE), length.out = n_grid)
+    newdat <- data.frame(x = x_grid)
+
+    if ("h1" %in% names(fit$data)) newdat$h1 <-
+    fit$data$h1[1]
+    if ("h2" %in% names(fit$data)) newdat$h2 <-
+    fit$data$h2[1]
+
+    pred <- fitted(
+      fit,
+      newdata = newdat,
+      resp = resp,
+      re_formula = NA,
+      probs = c(0.05, 0.95))
+
+    obs <- data.frame(
+      response = resp_label(resp),
+      row_id = seq_len(nrow(dat)),
+      x = dat$x,
+      observed = backtransform(resp, dat[[resp]]))
+
+    curve <- data.frame(
+      response = resp_label(resp),
+      x = x_grid,
+      predicted = backtransform(resp, pred[, "Estimate"]),
+      pred_q05 = backtransform(resp, pred[, "Q5"]),
+      pred_q95 = backtransform(resp, pred[, "Q95"]))
+
+    list(
+      obs = add_meta(obs, model, model_file, model_time),
+      curve = add_meta(curve, model, model_file,
+      model_time))
+  }
+
+  curve_list <- unlist(Map(function(fit, model, file,
+  time) {
+    list(
+      get_response_curve(fit, model, file, time, "y1m1"),
+      get_response_curve(fit, model, file, time, "y2")
+    )
+  }, fits, model_info$model, model_info$model_file,
+  model_info$model_time), recursive = FALSE)
+
+  step5_obs <- do.call(rbind, lapply(curve_list, `[[`,
+  "obs"))
+  step5_curve <- do.call(rbind, lapply(curve_list, `[[`,
+  "curve"))
+
+write_txt(step5_obs,"05_response_vs_rsd_observed.txt")
+write_txt(step5_curve,"05_response_vs_rsd_predicted.txt")
+
+pdf(file.path(out_dir, "05_response_vs_rsd.pdf"), width=12,height=7)
+  old_par <- par(no.readonly = TRUE)
+
+  for (resp in c("befa.st", "befr.st")) {
+    par(mfrow = c(2, 4), mar = c(4, 4, 3, 1), oma = c(0,
+    0, 2, 0))
+
+    for (mod in names(fits)) {
+      obs_d <- step5_obs[step5_obs$response == resp &
+      step5_obs$model == mod, ]
+      cur_d <- step5_curve[step5_curve$response == resp &
+      step5_curve$model == mod, ]
+      ord <- order(cur_d$x)
+
+      ylim <- range(c(obs_d$observed, cur_d$pred_q05,
+      cur_d$pred_q95), na.rm = TRUE)
+
+      plot(obs_d$x, obs_d$observed,
+        pch = 16, col = rgb(0, 0, 0, 0.35),
+        xlab = "Relative stand density (rsd)",
+        ylab = resp,
+        main = paste(resp, mod, sep = " | "),
+        ylim = ylim
+      )
+
+      lines(cur_d$x[ord], cur_d$predicted[ord], col =
+      "red", lwd = 2)
+      lines(cur_d$x[ord], cur_d$pred_q05[ord], col =
+      "red", lty = 2)
+      lines(cur_d$x[ord], cur_d$pred_q95[ord], col =
+      "red", lty = 2)
+    }
+
+    plot.new()
+    mtext(paste("Response vs rsd:", resp), outer = TRUE,
+    cex = 1.2)
+  }
+
+  par(old_par)
+  dev.off()
+
+  writeLines(
+    c(
+      paste("Run ID:", run_id),
+      paste("Run generated at:", run_generated_at),
+      paste("Output directory:", out_dir),
+      "",
+      "Files:",
+      list.files(out_dir)
+    ),
+    file.path(out_dir, "RUN_SUMMARY.txt")
+  )
+
+  out_dir
+
+
 sp_c<-readRDS("bayes_outputs/exp_decay_sp_code_rsd_4chn_4000itr_4cor_0.99del_15depth.rds")
 pft_sp<-readRDS("bayes_outputs/exp_decay_PFT_sp_code_rsd_4chn_4000itr_4cor_0.99del_15depth.rds")
 pft<-readRDS("bayes_outputs/exp_decay_PFT_rsd_4chn_4000itr_4cor_0.99del_15depth.rds")
 
-ftp_sp
+
+ftp.sp0n<-readRDS("bayes_outputs/exp_decay_log_partial_pool_ftp_sp_code_kdepth0_rsd_student_4chn_4000itr_4cor_0.99del_15depth.rds")
+ftp.sp0n
+source("scripts/00_bayesian_functions.R")
+pp_check(ftp.sp0n,resp='y1')
+pp_check(ftp.sp0,resp='z1')
+
+
+ftp.sp0
 summary(ftp_sp)
 summary(pft_sp)
 summary(ftp)
