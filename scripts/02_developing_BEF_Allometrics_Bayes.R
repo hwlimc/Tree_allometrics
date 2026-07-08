@@ -6,18 +6,28 @@ library(brms)
 library(posterior)
 library(loo)
 
-run_id <- format(Sys.time(), "%Y%m%d_%H%M%S")
+run_id <- format(Sys.time(), "%Y%m%d")
 run_generated_at <- as.character(Sys.time())
-out_dir <- file.path("bayes_outputs", "bef_bayes", run_id)
+out_dir <- file.path("processed_data", "bef_bayes", run_id)
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 
 # ---- model-list ----
 model_dir <- "bayes_outputs"
-model_file_pattern <- "^xp_(.+)_(gamma|lognormal|stud|student)_rsd_4-4k-99-15[.]rds$"
+comparison_family <- "gamma"
+family_pattern <- "gamma|lognormal|lnorm|stud|student|tdis|gaussian|normal|ndis"
+model_file_pattern <- paste0("^xp_(.+)_(", family_pattern, ")_rsd_4-4k-99-15[.]rds$")
 
 family_label <- function(family) {
   family <- tolower(family)
-  ifelse(family %in% c("stud", "student"), "student", family)
+  ifelse(
+    family %in% c("stud", "student", "tdis"),
+    "student",
+    ifelse(
+      family %in% c("lognormal", "lnorm"),
+      "lognormal",
+      ifelse(family %in% c("gaussian", "normal", "ndis"), "gaussian", family)
+    )
+  )
 }
 
 model_structure_label <- function(structure_key) {
@@ -153,11 +163,15 @@ run_by_model <- function(fun) {
   do.call(rbind, Map(fun, fits, model_info$model))
 }
 
-run_by_model_response <- function(fun) {
+run_by_model_response <- function(fun, model_index = seq_along(fits)) {
+  if (length(model_index) == 0) {
+    stop("No models selected.")
+  }
+
   out <- list()
   k <- 1L
 
-  for (i in seq_along(fits)) {
+  for (i in model_index) {
     resp_info <- response_info_for_fit(fits[[i]])
     for (j in seq_len(nrow(resp_info))) {
       out[[k]] <- fun(fits[[i]], model_info$model[[i]], resp_info[j, , drop = FALSE])
@@ -215,7 +229,6 @@ compute_loo <- function(fit, resp_info, newdata) {
 # ---- manifest ----
 manifest <- data.frame(
   run_id = run_id,
-  run_generated_at = run_generated_at,
   model_info,
   n_rows = sapply(fits, function(x) nrow(x$data)),
   stringsAsFactors = FALSE
@@ -252,7 +265,8 @@ get_mcmc <- function(fit, model) {
 
 step1 <- run_by_model(get_mcmc)
 write_txt(step1, "01_mcmc_diagnostics.txt")
-step1
+step1[step1$divergences>1,]
+step1[step1$max_rhat>1.01,]
 
 # ---- step-2-posterior ----
 get_posteriors <- function(fit, model) {
@@ -386,28 +400,36 @@ plot_ppc_density_one <- function(fit, model, resp_info, ndraws = 50) {
   )
 }
 
-pdf(file.path(out_dir, "03_ppcheck_density_observed_yrep.pdf"), width = 12, height = 7)
-old_par <- par(no.readonly = TRUE)
-layout_dim <- plot_grid(length(fits))
+for (family_name in unique(model_info$family)) {
+  family_idx <- which(model_info$family == family_name)
+  layout_dim <- plot_grid(length(family_idx))
 
-for (response_name in c("befa.st", "befr.st")) {
-  par(
-    mfrow = c(layout_dim["nrow"], layout_dim["ncol"]),
-    mar = c(4, 4, 3, 1),
-    oma = c(0, 0, 2, 0)
+  pdf(
+    file.path(out_dir, paste0("03_ppcheck_density_observed_yrep_", family_name, ".pdf")),
+    width = 12,
+    height = 7
   )
+  old_par <- par(no.readonly = TRUE)
 
-  for (i in seq_along(fits)) {
-    resp_info <- response_info_for_fit(fits[[i]])
-    resp_info <- resp_info[resp_info$response == response_name, , drop = FALSE]
-    plot_ppc_density_one(fits[[i]], model_info$model[[i]], resp_info)
+  for (response_name in c("befa.st", "befr.st")) {
+    par(
+      mfrow = c(layout_dim["nrow"], layout_dim["ncol"]),
+      mar = c(4, 4, 3, 1),
+      oma = c(0, 0, 2, 0)
+    )
+
+    for (i in family_idx) {
+      resp_info <- response_info_for_fit(fits[[i]])
+      resp_info <- resp_info[resp_info$response == response_name, , drop = FALSE]
+      plot_ppc_density_one(fits[[i]], model_info$model[[i]], resp_info)
+    }
+
+    mtext(paste("Density PPC:", response_name, "|", family_name), outer = TRUE, cex = 1.2)
   }
 
-  mtext(paste("Density PPC:", response_name), outer = TRUE, cex = 1.2)
+  par(old_par)
+  dev.off()
 }
-
-par(old_par)
-dev.off()
 
 # ---- step-4-observed-predicted-data ----
 get_obs_pred <- function(fit, model, resp_info) {
@@ -494,7 +516,12 @@ get_loo <- function(fit, model, resp_info) {
   add_model(out, model)
 }
 
-step5 <- run_by_model_response(get_loo)
+comparison_model_idx <- which(model_info$family == comparison_family)
+if (length(comparison_model_idx) == 0) {
+  stop("No ", comparison_family, " models found for model comparison.")
+}
+
+step5 <- run_by_model_response(get_loo, model_index = comparison_model_idx)
 step5 <- step5[order(step5$response, -step5$elpd_loo), ]
 write_txt(step5, "05_loo_metrics_by_response.txt")
 step5

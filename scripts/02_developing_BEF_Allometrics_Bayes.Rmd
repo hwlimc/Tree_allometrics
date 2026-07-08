@@ -107,9 +107,8 @@ knitr::kable(
 
 # Model Comparison
 
-Gamma and lognormal fits use the positive response scale directly. Student fits
-saved with `z1`/`z2` use log-transformed responses, so their pointwise
-log-likelihoods are Jacobian-adjusted before LOO comparison.
+Model comparison is restricted to gamma fits because the non-gamma fits showed
+sampling pathologies. Gamma fits use the positive response scale directly.
 
 ```{r loo-ranking}
 loo_tbl <- wf$step5_total
