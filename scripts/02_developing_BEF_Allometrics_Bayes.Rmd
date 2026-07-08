@@ -1,0 +1,162 @@
+---
+title: "BEF Bayesian Workflow"
+output:
+  html_document:
+    theme: flatly
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.width = 9,
+  fig.height = 6
+)
+script_dir <- dirname(knitr::current_input(dir = TRUE))
+project_root <- normalizePath(file.path(script_dir, ".."), mustWork = TRUE)
+setwd(script_dir)
+
+wf <- new.env(parent = globalenv())
+source(file.path(script_dir, "02_developing_BEF_Allometrics_Bayes.R"), local = wf)
+```
+
+# Overview
+
+This report is generated from the workflow script [02_developing_BEF_Allometrics_Bayes.R](02_developing_BEF_Allometrics_Bayes.R).  
+Edit the `.R` file only. The HTML is a readable record of that run.
+
+```{r overview}
+cat("**Run ID:**", wf$run_id, "\n\n")
+cat("**Run time:**", wf$run_generated_at, "\n\n")
+cat("**Project root:**", project_root, "\n\n")
+cat("**Output directory:**", wf$out_dir, "\n\n")
+```
+
+# Inputs
+
+```{r inputs}
+input_manifest <- wf$manifest
+input_manifest$model_time <- format(as.POSIXct(input_manifest$model_time), "%Y-%m-%d %H:%M:%S")
+
+knitr::kable(
+  input_manifest[, c("model", "model_file", "model_time", "n_rows")],
+  col.names = c("Model", "File", "File time", "Rows"),
+  align = c("l", "l", "l", "r")
+)
+```
+
+# Diagnostics
+
+```{r diagnostics}
+diag_tbl <- wf$step1[, c(
+  "model", "divergences", "max_treedepth", "max_rhat",
+  "max_rhat_parameter", "min_bulk_ess", "min_bulk_ess_parameter",
+  "min_tail_ess", "min_tail_ess_parameter"
+)]
+
+knitr::kable(
+  diag_tbl,
+  digits = 3,
+  align = c("l", "r", "r", "r", "l", "r", "l", "r", "l")
+)
+```
+
+# Posterior Summaries
+
+```{r posterior-summaries}
+post_tbl <- wf$step2
+post_tbl <- post_tbl[post_tbl$variable %in% c(
+  "b_y1m1_logL_Intercept", "b_y1m1_logA_Intercept", "b_y1m1_logk_Intercept",
+  "b_y2_logL_Intercept", "b_y2_logA_Intercept", "b_y2_logk_Intercept",
+  "sd_h1__y1m1_logL_Intercept", "sd_h1__y1m1_logA_Intercept",
+  "sd_h1__y2_logL_Intercept", "sd_h1__y2_logA_Intercept"
+), ]
+
+knitr::kable(
+  post_tbl[, c("model", "variable", "mean", "median", "sd", "q5", "q95")],
+  digits = 4,
+  align = c("l", "l", "r", "r", "r", "r", "r")
+)
+```
+
+# Posterior Predictive Checks
+
+The next table compares observed values with posterior predictive draws on the original scale.
+
+```{r ppcheck-summary}
+pp_tbl <- wf$step3_summary
+knitr::kable(
+  pp_tbl[, c(
+    "model", "response", "n", "observed_mean", "yrep_median_mean",
+    "mean_residual", "rmse", "mean_abs_std_residual",
+    "prop_outside_yrep90", "prop_pp_twotail_lt_0.10", "prop_pp_twotail_lt_0.05"
+  )],
+  digits = 4,
+  align = c("l", "l", "r", "r", "r", "r", "r", "r", "r", "r", "r")
+)
+```
+
+# Model Comparison
+
+```{r loo-ranking}
+loo_tbl <- wf$step5_total
+knitr::kable(
+  loo_tbl[, c(
+    "model", "elpd_loo", "p_loo", "looic", "max_pareto_k",
+    "n_pareto_k_gt_0.7", "n_pareto_k_gt_1.0", "elpd_diff_from_best",
+    "looic_diff_from_best"
+  )],
+  digits = 3,
+  align = c("l", "r", "r", "r", "r", "r", "r", "r", "r")
+)
+```
+
+# Outputs
+
+```{r outputs}
+out_files <- sort(list.files(wf$out_dir))
+out_tbl <- data.frame(
+  file = out_files,
+  path = file.path(wf$out_dir, out_files),
+  stringsAsFactors = FALSE
+)
+
+knitr::kable(
+  out_tbl,
+  col.names = c("File", "Path"),
+  escape = FALSE,
+  align = c("l", "l")
+)
+```
+
+# Reproducibility
+
+```{r reproducibility}
+cat("**R version:**", R.version.string, "\n\n")
+cat("**Loaded packages:** `brms`, `posterior`, `loo`\n\n")
+cat("**Project root:**", project_root, "\n\n")
+cat("**Workflow script:**", file.path(script_dir, "02_developing_BEF_Allometrics_Bayes.R"), "\n\n")
+```
+
+```{r session-info, results='asis'}
+cat("```text\n")
+cat(paste(capture.output(sessionInfo()), collapse = "\n"))
+cat("\n```\n")
+```
+
+<details>
+<summary>Workflow script</summary>
+
+```{r workflow-script, echo=FALSE, results='asis'}
+cat("```r\n")
+cat(readLines(file.path(script_dir, "02_developing_BEF_Allometrics_Bayes.R")), sep = "\n")
+cat("\n```\n")
+```
+
+</details>
