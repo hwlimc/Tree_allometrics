@@ -1,21 +1,33 @@
-# BEF Bayesian Workflow
+BEF Bayesian Workflow
+================
 
-# 1 Overview
+- [Overview](#overview)
+- [Inputs](#inputs)
+- [Diagnostics](#diagnostics)
+- [Posterior Summaries](#posterior-summaries)
+- [Posterior Predictive Checks](#posterior-predictive-checks)
+- [Model Comparison](#model-comparison)
+- [Outputs](#outputs)
+- [Reproducibility](#reproducibility)
 
-This report is generated from the workflow script [02_developing_BEF_Allometrics_Bayes.R](02_developing_BEF_Allometrics_Bayes.R).  
-Edit the `.R` file only. This Markdown file is a GitHub-readable record of that run.
+# Overview
+
+This report is generated from the workflow script
+[02_developing_BEF_Allometrics_Bayes.R](02_developing_BEF_Allometrics_Bayes.R).  
+Edit the `.R` file only. The Markdown file is a GitHub-readable record
+of that run.
 
 ``` r
 cat("**Run ID:**", wf$run_id, "\n\n")
 ```
 
-    ## **Run ID:** 20260708_163138
+    ## **Run ID:** 20260708_214817
 
 ``` r
 cat("**Run time:**", wf$run_generated_at, "\n\n")
 ```
 
-    ## **Run time:** 2026-07-08 16:31:38.275159
+    ## **Run time:** 2026-07-08 21:48:17.687878
 
 ``` r
 cat("**Project root:**", project_root, "\n\n")
@@ -27,9 +39,9 @@ cat("**Project root:**", project_root, "\n\n")
 cat("**Output directory:**", wf$out_dir, "\n\n")
 ```
 
-    ## **Output directory:** bayes_outputs/bef_bayes/20260708_163138
+    ## **Output directory:** bayes_outputs/bef_bayes/20260708_214817
 
-# 2 Inputs
+# Inputs
 
 ``` r
 input_manifest <- wf$manifest
@@ -53,7 +65,7 @@ knitr::kable(
 | ftp_sp_k1 | ftp_sp_k1 | bayes_outputs/xp_ftp-sp_code_k1_gamma_rsd_4-4k-99-15.rds | 2026-06-18 14:31:54 | 1132 |
 | ftp_sp_k2 | ftp_sp_k2 | bayes_outputs/xp_ftp-sp_code_k2_gamma_rsd_4-4k-99-15.rds | 2026-06-18 14:52:57 | 1132 |
 
-# 3 Diagnostics
+# Diagnostics
 
 ``` r
 diag_tbl <- wf$step1[, c(
@@ -80,7 +92,7 @@ knitr::kable(
 | ftp_sp_k1 | ftp_sp_k1 |           0 |            10 |    1.008 | sd_h2\_\_y2_logA_Intercept             |      456.353 | sd_h2\_\_y2_logA_Intercept          |      767.130 | r_h2\_\_y2_logL\[mono_B.PxT,Intercept\] |
 | ftp_sp_k2 | ftp_sp_k2 |           0 |            11 |    1.013 | r_h2\_\_y2_logk\[mono_N.CO,Intercept\] |      391.653 | r_h1\_\_y2_logk\[mono_B,Intercept\] |      294.480 | r_h1\_\_y2_logA\[mono_B,Intercept\]     |
 
-# 4 Posterior Summaries
+# Posterior Summaries
 
 ``` r
 post_tbl <- wf$step2
@@ -177,9 +189,10 @@ knitr::kable(
 | ftp_sp_k2.13 | ftp_sp_k2 | sd_h1\_\_y2_logL_Intercept   |  0.7281 |  0.5227 | 0.7048 |  0.0568 |  2.0969 |
 | ftp_sp_k2.15 | ftp_sp_k2 | sd_h1\_\_y2_logA_Intercept   |  0.5415 |  0.3127 | 0.6419 |  0.0233 |  1.8783 |
 
-# 5 Posterior Predictive Checks
+# Posterior Predictive Checks
 
-The next table compares observed values with posterior predictive draws on the original scale.
+The next table compares observed values with posterior predictive draws
+on the original scale.
 
 ``` r
 pp_tbl <- wf$step3_summary
@@ -196,24 +209,24 @@ knitr::kable(
 
 |                   | model     | response |    n | observed_mean | yrep_median_mean | mean_residual |   rmse | mean_abs_std_residual | prop_outside_yrep90 | prop_pp_twotail_lt_0.10 | prop_pp_twotail_lt_0.05 |
 |:------------------|:----------|:---------|-----:|--------------:|-----------------:|--------------:|-------:|----------------------:|--------------------:|------------------------:|------------------------:|
-| base_k0.befa.st   | base_k0   | befa.st  | 1132 |        1.4411 |           1.3776 |        0.0635 | 0.3229 |                0.7598 |              0.0875 |                  0.0857 |                  0.0504 |
-| ftp_k0.befa.st    | ftp_k0    | befa.st  | 1132 |        1.4411 |           1.3805 |        0.0605 | 0.3188 |                0.7558 |              0.0875 |                  0.0839 |                  0.0512 |
-| ftp_k1.befa.st    | ftp_k1    | befa.st  | 1132 |        1.4411 |           1.3798 |        0.0612 | 0.3188 |                0.7568 |              0.0901 |                  0.0857 |                  0.0477 |
-| ftp_sp_k0.befa.st | ftp_sp_k0 | befa.st  | 1132 |        1.4411 |           1.3958 |        0.0452 | 0.2639 |                0.7144 |              0.0989 |                  0.0963 |                  0.0442 |
-| ftp_sp_k1.befa.st | ftp_sp_k1 | befa.st  | 1132 |        1.4411 |           1.3953 |        0.0458 | 0.2637 |                0.7155 |              0.0945 |                  0.0936 |                  0.0477 |
-| ftp_sp_k2.befa.st | ftp_sp_k2 | befa.st  | 1132 |        1.4411 |           1.3957 |        0.0454 | 0.2614 |                0.7074 |              0.0936 |                  0.0928 |                  0.0495 |
-| sp_k0.befa.st     | sp_k0     | befa.st  | 1132 |        1.4411 |           1.3955 |        0.0456 | 0.2634 |                0.7145 |              0.0945 |                  0.0928 |                  0.0512 |
-| sp_k1.befa.st     | sp_k1     | befa.st  | 1132 |        1.4411 |           1.3953 |        0.0458 | 0.2630 |                0.7108 |              0.0919 |                  0.0910 |                  0.0451 |
-| base_k0.befr.st   | base_k0   | befr.st  |  524 |        0.4422 |           0.4039 |        0.0383 | 0.2685 |                0.7399 |              0.0840 |                  0.0802 |                  0.0553 |
-| ftp_k0.befr.st    | ftp_k0    | befr.st  |  524 |        0.4422 |           0.4071 |        0.0351 | 0.2592 |                0.7434 |              0.0916 |                  0.0878 |                  0.0553 |
-| ftp_k1.befr.st    | ftp_k1    | befr.st  |  524 |        0.4422 |           0.4072 |        0.0350 | 0.2594 |                0.7466 |              0.0935 |                  0.0916 |                  0.0477 |
-| ftp_sp_k0.befr.st | ftp_sp_k0 | befr.st  |  524 |        0.4422 |           0.4134 |        0.0288 | 0.2259 |                0.7128 |              0.0706 |                  0.0706 |                  0.0382 |
-| ftp_sp_k1.befr.st | ftp_sp_k1 | befr.st  |  524 |        0.4422 |           0.4129 |        0.0293 | 0.2226 |                0.7037 |              0.0706 |                  0.0668 |                  0.0382 |
-| ftp_sp_k2.befr.st | ftp_sp_k2 | befr.st  |  524 |        0.4422 |           0.4135 |        0.0288 | 0.2242 |                0.7047 |              0.0706 |                  0.0706 |                  0.0344 |
-| sp_k0.befr.st     | sp_k0     | befr.st  |  524 |        0.4422 |           0.4130 |        0.0292 | 0.2260 |                0.7130 |              0.0649 |                  0.0649 |                  0.0344 |
-| sp_k1.befr.st     | sp_k1     | befr.st  |  524 |        0.4422 |           0.4128 |        0.0294 | 0.2261 |                0.7076 |              0.0706 |                  0.0687 |                  0.0363 |
+| base_k0.befa.st   | base_k0   | befa.st  | 1132 |        1.4411 |           1.3780 |        0.0631 | 0.3225 |                0.7591 |              0.0954 |                  0.0928 |                  0.0504 |
+| ftp_k0.befa.st    | ftp_k0    | befa.st  | 1132 |        1.4411 |           1.3800 |        0.0611 | 0.3194 |                0.7601 |              0.0892 |                  0.0866 |                  0.0521 |
+| ftp_k1.befa.st    | ftp_k1    | befa.st  | 1132 |        1.4411 |           1.3793 |        0.0617 | 0.3194 |                0.7571 |              0.0892 |                  0.0866 |                  0.0512 |
+| ftp_sp_k0.befa.st | ftp_sp_k0 | befa.st  | 1132 |        1.4411 |           1.3960 |        0.0450 | 0.2632 |                0.7135 |              0.0963 |                  0.0963 |                  0.0468 |
+| ftp_sp_k1.befa.st | ftp_sp_k1 | befa.st  | 1132 |        1.4411 |           1.3957 |        0.0454 | 0.2633 |                0.7134 |              0.0981 |                  0.0963 |                  0.0512 |
+| ftp_sp_k2.befa.st | ftp_sp_k2 | befa.st  | 1132 |        1.4411 |           1.3948 |        0.0463 | 0.2632 |                0.7103 |              0.0954 |                  0.0936 |                  0.0468 |
+| sp_k0.befa.st     | sp_k0     | befa.st  | 1132 |        1.4411 |           1.3961 |        0.0450 | 0.2633 |                0.7165 |              0.0954 |                  0.0945 |                  0.0521 |
+| sp_k1.befa.st     | sp_k1     | befa.st  | 1132 |        1.4411 |           1.3949 |        0.0462 | 0.2639 |                0.7100 |              0.0954 |                  0.0936 |                  0.0468 |
+| base_k0.befr.st   | base_k0   | befr.st  |  524 |        0.4422 |           0.4040 |        0.0382 | 0.2689 |                0.7392 |              0.0878 |                  0.0878 |                  0.0553 |
+| ftp_k0.befr.st    | ftp_k0    | befr.st  |  524 |        0.4422 |           0.4078 |        0.0344 | 0.2593 |                0.7456 |              0.0840 |                  0.0840 |                  0.0553 |
+| ftp_k1.befr.st    | ftp_k1    | befr.st  |  524 |        0.4422 |           0.4066 |        0.0356 | 0.2589 |                0.7440 |              0.0935 |                  0.0897 |                  0.0553 |
+| ftp_sp_k0.befr.st | ftp_sp_k0 | befr.st  |  524 |        0.4422 |           0.4134 |        0.0288 | 0.2260 |                0.7094 |              0.0706 |                  0.0706 |                  0.0401 |
+| ftp_sp_k1.befr.st | ftp_sp_k1 | befr.st  |  524 |        0.4422 |           0.4131 |        0.0291 | 0.2222 |                0.7048 |              0.0725 |                  0.0706 |                  0.0344 |
+| ftp_sp_k2.befr.st | ftp_sp_k2 | befr.st  |  524 |        0.4422 |           0.4132 |        0.0290 | 0.2246 |                0.7082 |              0.0687 |                  0.0687 |                  0.0324 |
+| sp_k0.befr.st     | sp_k0     | befr.st  |  524 |        0.4422 |           0.4137 |        0.0285 | 0.2258 |                0.7087 |              0.0649 |                  0.0649 |                  0.0344 |
+| sp_k1.befr.st     | sp_k1     | befr.st  |  524 |        0.4422 |           0.4124 |        0.0298 | 0.2260 |                0.7094 |              0.0744 |                  0.0706 |                  0.0420 |
 
-# 6 Model Comparison
+# Model Comparison
 
 ``` r
 loo_tbl <- wf$step5_total
@@ -239,7 +252,7 @@ knitr::kable(
 | 3   | ftp_k1    |  149.125 | 12.807 | -298.249 |    0.3417675 |                 0 |                 0 |            -277.566 |              555.132 |
 | 1   | base_k0   |  103.961 |  8.824 | -207.923 |    0.2246412 |                 0 |                 0 |            -322.729 |              645.459 |
 
-# 7 Outputs
+# Outputs
 
 ``` r
 out_files <- sort(list.files(wf$out_dir))
@@ -258,9 +271,9 @@ knitr::kable(
 ```
 
 | File | Path |
-|------|------|
+|:-----|:-----|
 
-# 8 Reproducibility
+# Reproducibility
 
 ``` r
 cat("**R version:**", R.version.string, "\n\n")
@@ -291,48 +304,57 @@ cat("```text\n")
 ```
 
 ``` text
+
 ``` r
 cat(paste(capture.output(sessionInfo()), collapse = "\n"))
 ```
 
-R version 4.6.0 (2026-04-24) Platform: aarch64-apple-darwin23 Running under: macOS Tahoe 26.5.1
+R version 4.6.0 (2026-04-24) Platform: aarch64-apple-darwin23 Running
+under: macOS Tahoe 26.5.1
 
-Matrix products: default BLAS: /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib LAPACK: /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRlapack.dylib; LAPACK version 3.12.1
+Matrix products: default BLAS:
+/Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib
+LAPACK:
+/Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRlapack.dylib;
+LAPACK version 3.12.1
 
 locale: \[1\] C.UTF-8/UTF-8/C.UTF-8/C/C.UTF-8/C.UTF-8
 
 time zone: Europe/Stockholm tzcode source: internal
 
-attached base packages: \[1\] stats graphics grDevices utils datasets methods base
+attached base packages: \[1\] stats graphics grDevices utils datasets
+methods base
 
-other attached packages: \[1\] loo_2.9.0 posterior_1.7.0 brms_2.23.0 Rcpp_1.1.1-1.1
+other attached packages: \[1\] loo_2.9.0 posterior_1.7.0 brms_2.23.0
+Rcpp_1.1.1-1.1
 
-loaded via a namespace (and not attached): \[1\] bridgesampling_1.2-1 tensorA_0.36.2.1 sass_0.4.10  
-\[4\] generics_0.1.4 stringi_1.8.7 lattice_0.22-9  
-\[7\] digest_0.6.39 magrittr_2.0.5 evaluate_1.0.5  
-\[10\] grid_4.6.0 RColorBrewer_1.1-3 mvtnorm_1.4-0  
-\[13\] fastmap_1.2.0 plyr_1.8.9 jsonlite_2.0.0  
-\[16\] Matrix_1.7-5 processx_3.9.0 pkgbuild_1.4.8  
-\[19\] backports_1.5.1 gridExtra_2.3 Brobdingnag_1.2-9  
-\[22\] QuickJSR_1.10.0 scales_1.4.0 codetools_0.2-20  
-\[25\] jquerylib_0.1.4 abind_1.4-8 cli_3.6.6  
-\[28\] rlang_1.2.0 cmdstanr_0.8.0 cachem_1.1.0  
-\[31\] yaml_2.3.12 StanHeaders_2.32.10 inline_0.3.21  
-\[34\] rstan_2.32.7 tools_4.6.0 parallel_4.6.0  
-\[37\] reshape2_1.4.5 rstantools_2.6.0 checkmate_2.3.4  
-\[40\] coda_0.19-4.1 dplyr_1.2.1 ggplot2_4.0.3  
-\[43\] vctrs_0.7.3 R6_2.6.1 stats4_4.6.0  
-\[46\] matrixStats_1.5.0 lifecycle_1.0.5 stringr_1.6.0  
-\[49\] pkgconfig_2.0.3 RcppParallel_5.1.11-2 pillar_1.11.1  
-\[52\] bslib_0.11.0 gtable_0.3.6 glue_1.8.1  
-\[55\] xfun_0.59 tibble_3.3.1 tidyselect_1.2.1  
-\[58\] knitr_1.51 farver_2.1.2 bayesplot_1.15.0  
-\[61\] htmltools_0.5.9 nlme_3.1-169 rmarkdown_2.31  
-\[64\] compiler_4.6.0 S7_0.2.2 distributional_0.7.0
+loaded via a namespace (and not attached): \[1\] bridgesampling_1.2-1
+tensorA_0.36.2.1 generics_0.1.4  
+\[4\] stringi_1.8.7 lattice_0.22-9 digest_0.6.39  
+\[7\] magrittr_2.0.5 evaluate_1.0.5 grid_4.6.0  
+\[10\] RColorBrewer_1.1-3 mvtnorm_1.4-0 fastmap_1.2.0  
+\[13\] plyr_1.8.9 Matrix_1.7-5 processx_3.9.0  
+\[16\] pkgbuild_1.4.8 backports_1.5.1 gridExtra_2.3  
+\[19\] Brobdingnag_1.2-9 QuickJSR_1.10.0 scales_1.4.0  
+\[22\] codetools_0.2-20 abind_1.4-8 cli_3.6.6  
+\[25\] rlang_1.2.0 cmdstanr_0.8.0 yaml_2.3.12  
+\[28\] StanHeaders_2.32.10 inline_0.3.21 rstan_2.32.7  
+\[31\] tools_4.6.0 parallel_4.6.0 reshape2_1.4.5  
+\[34\] rstantools_2.6.0 checkmate_2.3.4 coda_0.19-4.1  
+\[37\] dplyr_1.2.1 ggplot2_4.0.3 vctrs_0.7.3  
+\[40\] R6_2.6.1 stats4_4.6.0 matrixStats_1.5.0  
+\[43\] lifecycle_1.0.5 stringr_1.6.0 pkgconfig_2.0.3  
+\[46\] RcppParallel_5.1.11-2 pillar_1.11.1 gtable_0.3.6  
+\[49\] glue_1.8.1 xfun_0.59 tibble_3.3.1  
+\[52\] tidyselect_1.2.1 knitr_1.51 farver_2.1.2  
+\[55\] bayesplot_1.15.0 htmltools_0.5.9 nlme_3.1-169  
+\[58\] rmarkdown_2.31 compiler_4.6.0 S7_0.2.2  
+\[61\] distributional_0.7.0
 
 ``` r
 cat("\n```\n")
 ```
+
 
     <details>
     <summary>Workflow script</summary>
@@ -890,3 +912,5 @@ cat("\n```\n")
     )
 
     out_dir
+
+</details>

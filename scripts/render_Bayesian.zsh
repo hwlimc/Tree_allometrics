@@ -4,8 +4,8 @@ set -euo pipefail
 script_dir="${0:A:h}"
 project_root="$(cd "$script_dir/.." && pwd -P)"
 rmd_file="$script_dir/02_developing_BEF_Allometrics_Bayes.Rmd"
-output_dir="$project_root/bayes_outputs"
-output_file="BEF_Bayesian.html"
+output_dir="$script_dir"
+output_file="BEF_Bayesian.md"
 
 usage() {
   cat <<'EOF'
@@ -15,11 +15,11 @@ Usage:
 This renders:
   02_developing_BEF_Allometrics_Bayes.Rmd
 
-The HTML output is written to:
-  ../bayes_outputs/BEF_Bayesian.html
+The Markdown output is written to:
+  BEF_Bayesian.md
 
 Options:
-  --open    Open the rendered HTML in the default browser after rendering.
+  --open    Open the rendered Markdown in the default application after rendering.
   --help    Show this help message.
 EOF
 }
@@ -76,7 +76,11 @@ if (length(missing_pkgs) > 0) {
 
 rmarkdown::render(
   input = rmd_file,
-  output_format = "html_document",
+  output_format = rmarkdown::github_document(
+    toc = TRUE,
+    html_preview = FALSE,
+    df_print = "default"
+  ),
   output_dir = output_dir,
   output_file = output_file,
   intermediates_dir = output_dir,
@@ -85,10 +89,10 @@ rmarkdown::render(
 )
 RSCRIPT
 
-html_file="$output_dir/$output_file"
-echo "Rendered HTML:"
-echo "$html_file"
+md_file="$output_dir/$output_file"
+echo "Rendered Markdown:"
+echo "$md_file"
 
 if [[ "$open_after" == true ]]; then
-  open "$html_file"
+  open "$md_file"
 fi

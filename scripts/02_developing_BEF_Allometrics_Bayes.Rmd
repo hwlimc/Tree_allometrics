@@ -1,13 +1,11 @@
 ---
 title: "BEF Bayesian Workflow"
 output:
-  html_document:
-    theme: flatly
+  github_document:
     toc: true
-    toc_float: true
-    number_sections: true
-    code_folding: hide
-    df_print: paged
+    toc_depth: 3
+    html_preview: false
+    df_print: default
 ---
 
 ```{r setup, include=FALSE}
@@ -29,7 +27,7 @@ source(file.path(script_dir, "02_developing_BEF_Allometrics_Bayes.R"), local = w
 # Overview
 
 This report is generated from the workflow script [02_developing_BEF_Allometrics_Bayes.R](02_developing_BEF_Allometrics_Bayes.R).  
-Edit the `.R` file only. The HTML is a readable record of that run.
+Edit the `.R` file only. The Markdown file is a GitHub-readable record of that run.
 
 ```{r overview}
 cat("**Run ID:**", wf$run_id, "\n\n")
