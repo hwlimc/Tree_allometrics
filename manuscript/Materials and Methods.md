@@ -12,9 +12,11 @@
 
 
 Allometrics are expressed as a power function: 
+
 $$
 y = aX^b
 $$
+
 For parameter estimation, both predict and response variables are log-transformed to linearize the relationship. 
 $$
 \log (y) = \log(a) + b \log (X) + \varepsilon
