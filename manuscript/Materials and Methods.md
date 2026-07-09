@@ -35,7 +35,6 @@ where $N_i$ is stand density (trees ha\(^{-1}\)), $D_i$ is quadratic mean diamet
 For each species (or functional group) (g), the maximum stand density index was estimated as the 99th percentile of observed SDI values for each species.
 
 ### Relative Stand Density
-
 Relative stand density was calculated as:
 
 $$
