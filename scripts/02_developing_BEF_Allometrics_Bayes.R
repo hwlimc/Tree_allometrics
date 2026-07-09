@@ -14,6 +14,10 @@ dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 # ---- model-list ----
 model_dir <- "bayes_outputs"
 comparison_family <- "gamma"
+publication_curve_grid_n <- 100
+publication_curve_draws_n <- 200
+publication_curve_probs <- c(0.025, 0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95, 0.975)
+publication_curve_prob_names <- c("q025", "q05", "q10", "q25", "q50", "q75", "q90", "q95", "q975")
 family_pattern <- "gamma|lognormal|lnorm|stud|student|tdis|gaussian|normal|ndis"
 model_file_pattern <- paste0("^xp_(.+)_(", family_pattern, ")_rsd_4-4k-99-15[.]rds$")
 
@@ -186,6 +190,27 @@ plot_grid <- function(n) {
   ncol <- min(4, n)
   nrow <- ceiling(n / ncol)
   c(nrow = nrow, ncol = ncol)
+}
+
+plot_pdf_height <- function(n) {
+  layout_dim <- plot_grid(n)
+  max(7, 2.4 * layout_dim["nrow"])
+}
+
+prediction_grid_for_fit <- function(fit, resp_info, n_grid = publication_curve_grid_n) {
+  resp <- resp_info$resp[[1]]
+  dat <- fit$data[!is.na(fit$data[[resp]]), , drop = FALSE]
+  x_grid <- seq(min(dat$x, na.rm = TRUE), max(dat$x, na.rm = TRUE), length.out = n_grid)
+  newdat <- data.frame(x = x_grid)
+
+  if ("h1" %in% names(fit$data)) {
+    newdat$h1 <- fit$data$h1[1]
+  }
+  if ("h2" %in% names(fit$data)) {
+    newdat$h2 <- fit$data$h2[1]
+  }
+
+  list(dat = dat, x_grid = x_grid, newdata = newdat)
 }
 
 chain_id_for_fit <- function(fit, ndraws) {
@@ -455,9 +480,13 @@ write_txt(step4, "04_observed_vs_predicted.txt")
 head(step4)
 
 # ---- step-4-observed-predicted-plot ----
-pdf(file.path(out_dir, "04_observed_vs_predicted.pdf"), width = 12, height = 7)
-old_par <- par(no.readonly = TRUE)
 layout_dim <- plot_grid(length(fits))
+pdf(
+  file.path(out_dir, "04_observed_vs_predicted.pdf"),
+  width = 12,
+  height = plot_pdf_height(length(fits))
+)
+old_par <- par(no.readonly = TRUE)
 
 for (resp in c("befa.st", "befr.st")) {
   par(
@@ -555,20 +584,13 @@ step5_total
 # ---- step-5-response-rsd-data ----
 get_response_curve <- function(fit, model, resp_info, n_grid = 100) {
   resp <- resp_info$resp[[1]]
-  dat <- fit$data[!is.na(fit$data[[resp]]), , drop = FALSE]
-  x_grid <- seq(min(dat$x, na.rm = TRUE), max(dat$x, na.rm = TRUE), length.out = n_grid)
-  newdat <- data.frame(x = x_grid)
-
-  if ("h1" %in% names(fit$data)) {
-    newdat$h1 <- fit$data$h1[1]
-  }
-  if ("h2" %in% names(fit$data)) {
-    newdat$h2 <- fit$data$h2[1]
-  }
+  grid <- prediction_grid_for_fit(fit, resp_info, n_grid = n_grid)
+  dat <- grid$dat
+  x_grid <- grid$x_grid
 
   pred <- fitted(
     fit,
-    newdata = newdat,
+    newdata = grid$newdata,
     resp = resp,
     re_formula = NA,
     probs = c(0.05, 0.95)
@@ -611,10 +633,130 @@ write_txt(step5_obs, "05_response_vs_rsd_observed.txt")
 write_txt(step5_curve, "05_response_vs_rsd_predicted.txt")
 head(step5_curve)
 
+# ---- step-6-publication-figure-data ----
+# These files are small, annotated derivatives for publication figures. They keep
+# posterior uncertainty needed for plotting without writing full draw matrices.
+best_comparison_model <- step5_total$model[[1]]
+
+add_best_comparison_flag <- function(df) {
+  df$is_best_comparison_model <- df$model == best_comparison_model
+  df
+}
+
+get_publication_curve_summary <- function(fit, model, resp_info) {
+  resp <- resp_info$resp[[1]]
+  grid <- prediction_grid_for_fit(fit, resp_info)
+
+  epred <- posterior_epred(
+    fit,
+    newdata = grid$newdata,
+    resp = resp,
+    re_formula = NA
+  )
+  epred <- backtransform(resp_info, epred)
+
+  q <- t(apply(epred, 2, quantile, probs = publication_curve_probs, na.rm = TRUE))
+  colnames(q) <- paste0("pred_", publication_curve_prob_names)
+
+  add_model(data.frame(
+    response = resp_label(resp_info),
+    x = grid$x_grid,
+    predicted_mean = colMeans(epred, na.rm = TRUE),
+    predicted_median = apply(epred, 2, median, na.rm = TRUE),
+    predicted_sd = apply(epred, 2, sd, na.rm = TRUE),
+    q,
+    stringsAsFactors = FALSE
+  ), model)
+}
+
+get_publication_curve_draws <- function(fit, model, resp_info) {
+  resp <- resp_info$resp[[1]]
+  grid <- prediction_grid_for_fit(fit, resp_info)
+
+  epred <- posterior_epred(
+    fit,
+    newdata = grid$newdata,
+    resp = resp,
+    re_formula = NA,
+    ndraws = publication_curve_draws_n
+  )
+  epred <- backtransform(resp_info, epred)
+
+  add_model(data.frame(
+    response = resp_label(resp_info),
+    draw_id = rep(seq_len(nrow(epred)), each = length(grid$x_grid)),
+    x = rep(grid$x_grid, times = nrow(epred)),
+    predicted = as.vector(t(epred)),
+    stringsAsFactors = FALSE
+  ), model)
+}
+
+get_publication_parameter_summary <- function(fit, model) {
+  draws <- as_draws_df(fit)
+  variables <- names(draws)
+  variables <- variables[grepl("^(b_|sd_|shape_|sigma_|nu_)", variables)]
+
+  out <- do.call(rbind, lapply(variables, function(variable) {
+    x <- draws[[variable]]
+    data.frame(
+      variable = variable,
+      mean = mean(x, na.rm = TRUE),
+      median = median(x, na.rm = TRUE),
+      sd = sd(x, na.rm = TRUE),
+      q025 = unname(quantile(x, 0.025, na.rm = TRUE)),
+      q05 = unname(quantile(x, 0.05, na.rm = TRUE)),
+      q95 = unname(quantile(x, 0.95, na.rm = TRUE)),
+      q975 = unname(quantile(x, 0.975, na.rm = TRUE)),
+      prob_gt_0 = mean(x > 0, na.rm = TRUE),
+      prob_lt_0 = mean(x < 0, na.rm = TRUE),
+      stringsAsFactors = FALSE
+    )
+  }))
+
+  add_model(out, model)
+}
+
+step6_curve_summary <- do.call(
+  rbind,
+  lapply(comparison_model_idx, function(i) {
+    resp_info <- response_info_for_fit(fits[[i]])
+    do.call(rbind, lapply(seq_len(nrow(resp_info)), function(j) {
+      get_publication_curve_summary(fits[[i]], model_info$model[[i]], resp_info[j, , drop = FALSE])
+    }))
+  })
+)
+step6_curve_summary <- add_best_comparison_flag(step6_curve_summary)
+write_txt(step6_curve_summary, "06_publication_response_curve_summary_gamma.txt")
+
+step6_curve_draws <- do.call(
+  rbind,
+  lapply(comparison_model_idx, function(i) {
+    resp_info <- response_info_for_fit(fits[[i]])
+    do.call(rbind, lapply(seq_len(nrow(resp_info)), function(j) {
+      get_publication_curve_draws(fits[[i]], model_info$model[[i]], resp_info[j, , drop = FALSE])
+    }))
+  })
+)
+step6_curve_draws <- add_best_comparison_flag(step6_curve_draws)
+write_txt(step6_curve_draws, "06_publication_response_curve_draws_gamma.txt")
+
+step6_parameter_summary <- do.call(
+  rbind,
+  lapply(comparison_model_idx, function(i) {
+    get_publication_parameter_summary(fits[[i]], model_info$model[[i]])
+  })
+)
+step6_parameter_summary <- add_best_comparison_flag(step6_parameter_summary)
+write_txt(step6_parameter_summary, "06_publication_parameter_summary_gamma.txt")
+
 # ---- step-5-response-rsd-plot ----
-pdf(file.path(out_dir, "05_response_vs_rsd.pdf"), width = 12, height = 7)
-old_par <- par(no.readonly = TRUE)
 layout_dim <- plot_grid(length(fits))
+pdf(
+  file.path(out_dir, "05_response_vs_rsd.pdf"),
+  width = 12,
+  height = plot_pdf_height(length(fits))
+)
+old_par <- par(no.readonly = TRUE)
 
 for (resp in c("befa.st", "befr.st")) {
   par(
@@ -650,6 +792,135 @@ for (resp in c("befa.st", "befr.st")) {
 
 par(old_par)
 dev.off()
+
+# ---- output-annotation ----
+output_dictionary <- data.frame(
+  file = c(
+    "00_model_manifest.txt",
+    "01_mcmc_diagnostics.txt",
+    "02_posterior_parameter_summary.txt",
+    "03_ppcheck_observed_yrep_pointwise.txt",
+    "03_ppcheck_observed_yrep_summary.txt",
+    "03_ppcheck_density_observed_yrep_<family>.pdf",
+    "04_observed_vs_predicted.txt",
+    "04_observed_vs_predicted.pdf",
+    "05_loo_metrics_by_response.txt",
+    "05_loo_total_ranking.txt",
+    "05_response_vs_rsd_observed.txt",
+    "05_response_vs_rsd_predicted.txt",
+    "05_response_vs_rsd.pdf",
+    "06_publication_response_curve_summary_gamma.txt",
+    "06_publication_response_curve_draws_gamma.txt",
+    "06_publication_parameter_summary_gamma.txt",
+    "RUN_SUMMARY.txt"
+  ),
+  models = c(
+    "all discovered models",
+    "all discovered models",
+    "all discovered models",
+    "all discovered models",
+    "all discovered models",
+    "one file per discovered family",
+    "all discovered models",
+    "all discovered models",
+    paste(comparison_family, "models only"),
+    paste(comparison_family, "models only"),
+    "all discovered models",
+    "all discovered models",
+    "all discovered models",
+    paste(comparison_family, "models only"),
+    paste(comparison_family, "models only"),
+    paste(comparison_family, "models only"),
+    "run metadata"
+  ),
+  row_level = c(
+    "one row per model",
+    "one row per model",
+    "one row per model parameter",
+    "one row per model response observation",
+    "one row per model response",
+    "plot",
+    "one row per model response observation",
+    "plot",
+    "one row per gamma model response",
+    "one row per gamma model",
+    "one row per model response observation",
+    "one row per model response x-grid point",
+    "plot",
+    "one row per gamma model response x-grid point",
+    "one row per sampled posterior draw and x-grid point",
+    "one row per gamma model parameter",
+    "text"
+  ),
+  response_scale = c(
+    "metadata",
+    "diagnostic scale",
+    "parameter scale",
+    "original response scale",
+    "original response scale",
+    "original response scale",
+    "original response scale",
+    "original response scale",
+    "LOO on comparable original response scale",
+    "summed LOO on comparable original response scale",
+    "original response scale",
+    "original response scale",
+    "original response scale",
+    "original response scale",
+    "original response scale",
+    "parameter scale",
+    "metadata"
+  ),
+  purpose = c(
+    "Input model inventory and file metadata.",
+    "MCMC diagnostics for screening divergent or weakly mixed fits.",
+    "Posterior summaries for population, group SD, and family parameters.",
+    "Pointwise posterior predictive checks using observed values and yrep summaries.",
+    "Aggregate posterior predictive check metrics for model screening.",
+    "Density posterior predictive checks split by distribution family.",
+    "Observed versus posterior fitted medians for calibration plots.",
+    "Quick base-R observed versus predicted diagnostic plot.",
+    "Gamma-only response-level LOO metrics for model comparison.",
+    "Gamma-only total LOO ranking used to choose the comparison-best model.",
+    "Observed points for response versus relative stand density figures.",
+    "Posterior fitted response curves with 90 percent intervals for all models.",
+    "Quick base-R response versus relative stand density plot.",
+    "Publication-ready gamma response curves with multiple credible intervals.",
+    "Sampled gamma posterior expected curves for spaghetti or ribbon diagnostics.",
+    "Publication-ready gamma parameter summaries with posterior probabilities.",
+    "Run time, project path, output path, and output file listing."
+  ),
+  stringsAsFactors = FALSE
+)
+write_txt(output_dictionary, "00_output_dictionary.txt")
+
+writeLines(
+  c(
+    "BEF Bayesian post-processing outputs",
+    "",
+    paste("Generated:", run_generated_at),
+    paste("Run ID:", run_id),
+    paste("Project root:", project_root),
+    paste("Output directory:", out_dir),
+    paste("Discovered model families:", paste(sort(unique(model_info$family)), collapse = ", ")),
+    paste("Model comparison family:", comparison_family),
+    paste("Best comparison model:", best_comparison_model),
+    "",
+    "Scale notes:",
+    "- Figure datasets are on the original response scale: befa.st and befr.st.",
+    "- Student models saved on log responses are Jacobian-adjusted for LOO, but excluded from model comparison.",
+    "- Publication curve files use posterior expected responses, not full posterior predictive yrep draws.",
+    "- 06_publication_response_curve_draws_gamma.txt stores a compact draw sample for plotting, not all posterior draws.",
+    "",
+    "Recommended publication inputs:",
+    "- Main fitted-curve figure: 06_publication_response_curve_summary_gamma.txt.",
+    "- Optional spaghetti curves: 06_publication_response_curve_draws_gamma.txt.",
+    "- Gamma model ranking: 05_loo_total_ranking.txt.",
+    "- Diagnostics and screening: 01_mcmc_diagnostics.txt and 03_ppcheck_observed_yrep_summary.txt.",
+    "- Column and file descriptions: 00_output_dictionary.txt."
+  ),
+  file.path(out_dir, "README_OUTPUTS.txt")
+)
 
 # ---- run-summary ----
 writeLines(

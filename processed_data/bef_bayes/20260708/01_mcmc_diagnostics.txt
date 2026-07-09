@@ -1,7 +1,7 @@
 model	model_structure	family	divergences	max_treedepth	max_rhat	max_rhat_parameter	min_bulk_ess	min_bulk_ess_parameter	min_tail_ess	min_tail_ess_parameter
 base_k0_gamma	base_k0	gamma	0	9	1.00212277816591	lp__	1583.58549774222	lp__	3083.46275260901	lp__
-base_k0_gaussian	base_k0	gaussian	0	9	1.00251185893324	sigma_y1m1	1868.91818534303	lp__	3454.5306890622	lp__
 base_k0_lognormal	base_k0	lognormal	0	9	1.00128003669442	sigma_y1m1	1634.16171288786	lp__	3259.09609866587	lp__
+base_k0_student	base_k0	student	0	9	1.00251185893324	sigma_y1m1	1868.91818534303	lp__	3454.5306890622	lp__
 ftp_k0_gamma	ftp_k0	gamma	0	10	1.00169216605234	lp__	1587.84188981477	lp__	2853.02666212293	sd_h1__y2_logL_Intercept
 ftp_k0_lognormal	ftp_k0	lognormal	0	7	1.00269424187831	r_h1__y1m1_logA[mono_B,Intercept]	2046.13617446304	r_h1__y1m1_logA[mono_N,Intercept]	1899.42672631727	sd_h1__y2_logA_Intercept
 ftp_k0_student	ftp_k0	student	0	7	1.00229597926474	b_z2_logL_Intercept	1819.66226812241	lp__	1067.14200598513	r_h1__z2_logA[mono_B,Intercept]
