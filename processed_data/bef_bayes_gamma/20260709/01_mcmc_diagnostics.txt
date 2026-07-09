@@ -1,0 +1,7 @@
+model	model_structure	hierarchy	k_depth	family	divergences	max_treedepth	max_rhat	max_rhat_parameter	min_bulk_ess	min_bulk_ess_parameter	min_tail_ess	min_tail_ess_parameter
+base_k0_gamma	base_k0	base	k0	gamma	0	10	1.00131547016333	b_y1m1_logL_Intercept	1650.5252605867	lp__	2839.9177713293	lp__
+PFT_k0_gamma	PFT_k0	PFT	k0	gamma	0	10	1.00343716027699	lp__	1452.9830536893	lp__	2697.43893309786	sd_h1__y2_logA_Intercept
+PFT_k1_gamma	PFT_k1	PFT	k1	gamma	0	10	1.00571096132894	r_h1__y1m1_logk[EBF,Intercept]	697.815668014092	r_h1__y1m1_logk[EBF,Intercept]	1065.65159104702	r_h1__y2_logk[EBF,Intercept]
+PFT_sp_k0_gamma	PFT_sp_k0	PFT_sp	k0	gamma	0	11	1.00818605371414	b_y2_logk_Intercept	541.21251522778	b_y2_logk_Intercept	957.76777293809	b_y2_logk_Intercept
+PFT_sp_k1_gamma	PFT_sp_k1	PFT_sp	k1	gamma	0	11	1.00406473788716	r_h1__y2_logk[EBF,Intercept]	734.560267076425	b_y2_logk_Intercept	1083.87726696937	sd_h1__y1m1_logL_Intercept
+PFT_sp_k2_gamma	PFT_sp_k2	PFT_sp	k2	gamma	0	10	1.00574354880038	b_y2_logk_Intercept	836.781656780336	sd_h2__y2_logA_Intercept	1000.57731171496	sd_h2__y1m1_logk_Intercept

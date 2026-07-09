@@ -1,0 +1,7 @@
+run_id	model	model_structure	hierarchy	k_depth	family	model_file	model_time	model_file_size	n_rows
+20260709	base_k0_gamma	base_k0	base	k0	gamma	bayes_outputs/xp_none_k0_gamma_rsd_4-4k-99-15.rds	2026-07-09 00:09:24.976981	38095093	1132
+20260709	PFT_k0_gamma	PFT_k0	PFT	k0	gamma	bayes_outputs/xp_PFT_k0_gamma_rsd_4-4k-99-15.rds	2026-07-09 02:24:49.61522	40298338	1132
+20260709	PFT_k1_gamma	PFT_k1	PFT	k1	gamma	bayes_outputs/xp_PFT_k1_gamma_rsd_4-4k-99-15.rds	2026-07-09 06:30:02.469697	41402605	1132
+20260709	PFT_sp_k0_gamma	PFT_sp_k0	PFT_sp	k0	gamma	bayes_outputs/xp_PFT-sp_code_k0_gamma_rsd_4-4k-99-15.rds	2026-07-09 06:49:18.894902	51276007	1132
+20260709	PFT_sp_k1_gamma	PFT_sp_k1	PFT_sp	k1	gamma	bayes_outputs/xp_PFT-sp_code_k1_gamma_rsd_4-4k-99-15.rds	2026-07-09 07:26:29.987238	52378278	1132
+20260709	PFT_sp_k2_gamma	PFT_sp_k2	PFT_sp	k2	gamma	bayes_outputs/xp_PFT-sp_code_k2_gamma_rsd_4-4k-99-15.rds	2026-07-09 07:19:22.437656	57892957	1132
