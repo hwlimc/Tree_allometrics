@@ -28,7 +28,7 @@ $$
 SDI_i = N_i \left(\frac{D_i}{D_0}\right)^{\beta}
 $$
 
-where $N_i$ is stand density (trees ha$^{-1})$, $D_i$ is quadratic mean diameter, $D_0$ is a reference diameter (25.4 cm), and $\beta$ is the self-thinning exponent.
+where $N_i$ is stand density (trees ha$^{-1}$), $D_i$ is quadratic mean diameter, $D_0$ is a reference diameter (25.4 cm), and $\beta$ is the self-thinning exponent.
 
 ### Species-specific maximum density
 For each species (or functional group) (g), the maximum stand density index was estimated as the 99th percentile of observed SDI values for each species.
