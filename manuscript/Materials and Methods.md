@@ -38,10 +38,7 @@ For each species (or functional group) (g), the maximum stand density index was 
 Relative stand density was calculated as:
 
 $$
-RSD_i
-=
-\frac{SDI_i}
-     {SDI_{\max,g}}
+RSD_i = \frac{SDI_i}{SDI_{\max,g}}
 $$
 
 Values of \(RSD = 1\) indicate the species-specific self-thinning boundary, whereas values below 1 indicate stands below the maximum attainable density.
