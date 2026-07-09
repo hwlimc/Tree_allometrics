@@ -205,6 +205,28 @@ plot_pdf_height <- function(n) {
   max(7, 2.4 * layout_dim["nrow"])
 }
 
+plot_range <- function(x) {
+  out <- range(x, na.rm = TRUE)
+
+  if (!all(is.finite(out))) {
+    return(c(0, 1))
+  }
+
+  if (diff(out) == 0) {
+    pad <- if (out[1] == 0) 0.5 else abs(out[1]) * 0.05
+    return(out + c(-pad, pad))
+  }
+
+  pad <- diff(out) * 0.04
+  out + c(-pad, pad)
+}
+
+plot_group_label <- function(x, missing_label) {
+  out <- as.character(x)
+  out[is.na(out)] <- missing_label
+  out
+}
+
 prediction_grid_for_fit <- function(fit, resp_info, n_grid = publication_curve_grid_n) {
   resp <- resp_info$resp[[1]]
   dat <- fit$data[!is.na(fit$data[[resp]]), , drop = FALSE]
@@ -611,6 +633,101 @@ step5_curve <- do.call(rbind, lapply(curve_list, `[[`, "curve"))
 write_txt(step5_obs, "05_response_vs_rsd_observed.txt")
 write_txt(step5_curve, "05_response_vs_rsd_predicted.txt")
 
+# ---- step-5-response-rsd-h1-h2-data ----
+get_grouped_response_curve <- function(fit, model, resp_info, n_grid = 100) {
+  resp <- resp_info$resp[[1]]
+  dat <- fit$data[!is.na(fit$data[[resp]]) & !is.na(fit$data$x), , drop = FALSE]
+  group_vars <- intersect(c("h1", "h2"), names(dat))
+
+  obs <- add_model(data.frame(
+    response = resp_label(resp_info),
+    row_id = seq_len(nrow(dat)),
+    h1 = if ("h1" %in% names(dat)) plot_group_label(dat$h1, "missing h1") else rep("all", nrow(dat)),
+    h2 = if ("h2" %in% names(dat)) plot_group_label(dat$h2, "missing h2") else rep("all", nrow(dat)),
+    x = dat$x,
+    observed = backtransform(resp_info, dat[[resp]]),
+    stringsAsFactors = FALSE
+  ), model)
+
+  if (length(group_vars) == 0) {
+    combos <- data.frame(.all = 1L)
+    combo_rows <- list(seq_len(nrow(dat)))
+  } else {
+    complete <- complete.cases(dat[, group_vars, drop = FALSE])
+    combos <- unique(dat[complete, group_vars, drop = FALSE])
+
+    if (nrow(combos) == 0) {
+      stop("No complete h1/h2 groups available for ", model, " ", resp_label(resp_info))
+    }
+
+    combos <- combos[do.call(order, lapply(combos, function(x) as.character(x))), , drop = FALSE]
+    combo_rows <- lapply(seq_len(nrow(combos)), function(i) {
+      keep <- complete
+
+      for (v in group_vars) {
+        keep <- keep & dat[[v]] == combos[[v]][i]
+      }
+
+      which(keep)
+    })
+  }
+
+  curve_parts <- lapply(seq_along(combo_rows), function(i) {
+    rows <- combo_rows[[i]]
+    dat_i <- dat[rows, , drop = FALSE]
+    x_min <- min(dat_i$x, na.rm = TRUE)
+    x_max <- max(dat_i$x, na.rm = TRUE)
+    x_grid <- if (isTRUE(all.equal(x_min, x_max))) x_min else seq(x_min, x_max, length.out = n_grid)
+    newdat <- data.frame(x = x_grid)
+
+    for (v in group_vars) {
+      newdat[[v]] <- combos[[v]][rep(i, length(x_grid))]
+    }
+
+    pred <- fitted(
+      fit,
+      newdata = newdat,
+      resp = resp,
+      re_formula = NULL,
+      probs = c(0.05, 0.95)
+    )
+
+    data.frame(
+      response = resp_label(resp_info),
+      h1 = if ("h1" %in% group_vars) plot_group_label(combos$h1[i], "missing h1") else "all",
+      h2 = if ("h2" %in% group_vars) plot_group_label(combos$h2[i], "missing h2") else "all",
+      x_min_observed = x_min,
+      x_max_observed = x_max,
+      x = x_grid,
+      predicted = backtransform(resp_info, pred[, "Estimate"]),
+      pred_q05 = backtransform(resp_info, pred[, "Q5"]),
+      pred_q95 = backtransform(resp_info, pred[, "Q95"]),
+      stringsAsFactors = FALSE
+    )
+  })
+
+  list(
+    obs = obs,
+    curve = add_model(do.call(rbind, curve_parts), model)
+  )
+}
+
+grouped_curve_list <- unlist(
+  Map(function(fit, model) {
+    resp_info <- response_info_for_fit(fit)
+    lapply(seq_len(nrow(resp_info)), function(i) {
+      get_grouped_response_curve(fit, model, resp_info[i, , drop = FALSE])
+    })
+  }, fits, model_info$model),
+  recursive = FALSE
+)
+
+step5_grouped_obs <- do.call(rbind, lapply(grouped_curve_list, `[[`, "obs"))
+step5_grouped_curve <- do.call(rbind, lapply(grouped_curve_list, `[[`, "curve"))
+
+write_txt(step5_grouped_obs, "05_response_vs_rsd_h1_h2_observed.txt")
+write_txt(step5_grouped_curve, "05_response_vs_rsd_h1_h2_predicted.txt")
+
 # ---- step-6-publication-figure-data ----
 # These files are small, annotated derivatives for publication figures. They keep
 # posterior uncertainty needed for plotting without writing full draw matrices.
@@ -771,6 +888,100 @@ for (resp in response_names) {
 par(old_par)
 dev.off()
 
+# ---- step-5-response-rsd-h1-h2-plot ----
+max_h1_panels <- max(vapply(
+  split(step5_grouped_obs, list(step5_grouped_obs$response, step5_grouped_obs$model), drop = TRUE),
+  function(d) length(unique(d$h1)),
+  integer(1)
+))
+
+pdf(
+  file.path(out_dir, "05_response_vs_rsd_h1_h2.pdf"),
+  width = 12,
+  height = plot_pdf_height(max_h1_panels)
+)
+old_par <- par(no.readonly = TRUE)
+
+for (resp in response_names) {
+  for (mod in names(fits)) {
+    obs_d <- step5_grouped_obs[step5_grouped_obs$response == resp & step5_grouped_obs$model == mod, ]
+    cur_d <- step5_grouped_curve[step5_grouped_curve$response == resp & step5_grouped_curve$model == mod, ]
+    h1_levels <- sort(unique(obs_d$h1))
+    h2_levels <- sort(unique(obs_d$h2))
+    h2_cols <- setNames(hcl.colors(length(h2_levels), palette = "Dark 3"), h2_levels)
+    layout_dim <- plot_grid(length(h1_levels))
+    layout_slots <- prod(layout_dim)
+    xlim <- plot_range(c(obs_d$x, cur_d$x))
+    ylim <- plot_range(c(obs_d$observed, cur_d$pred_q05, cur_d$pred_q95))
+
+    par(
+      mfrow = c(layout_dim["nrow"], layout_dim["ncol"]),
+      mar = c(4, 4, 3, 1),
+      oma = c(0, 0, 2, 0)
+    )
+
+    for (panel_i in seq_along(h1_levels)) {
+      h1_level <- h1_levels[[panel_i]]
+
+      plot(
+        NA,
+        NA,
+        xlim = xlim,
+        ylim = ylim,
+        xlab = "Relative stand density (rsd)",
+        ylab = resp,
+        main = paste("h1:", h1_level)
+      )
+
+      for (h2_level in h2_levels) {
+        obs_i <- obs_d[obs_d$h1 == h1_level & obs_d$h2 == h2_level, ]
+        cur_i <- cur_d[cur_d$h1 == h1_level & cur_d$h2 == h2_level, ]
+        col_i <- h2_cols[[h2_level]]
+
+        if (nrow(obs_i) > 0) {
+          points(obs_i$x, obs_i$observed, pch = 16, col = adjustcolor(col_i, alpha.f = 0.45))
+        }
+
+        if (nrow(cur_i) > 0) {
+          ord <- order(cur_i$x)
+          lines(cur_i$x[ord], cur_i$predicted[ord], col = col_i, lwd = 2)
+          lines(cur_i$x[ord], cur_i$pred_q05[ord], col = adjustcolor(col_i, alpha.f = 0.70), lty = 2)
+          lines(cur_i$x[ord], cur_i$pred_q95[ord], col = adjustcolor(col_i, alpha.f = 0.70), lty = 2)
+        }
+      }
+
+      if (panel_i == 1 && any(h2_levels != "all")) {
+        legend_ncol <- if (length(h2_levels) > 16) 3 else if (length(h2_levels) > 8) 2 else 1
+        legend_cex <- if (length(h2_levels) > 16) 0.45 else if (length(h2_levels) > 8) 0.55 else 0.70
+
+        legend(
+          "topright",
+          legend = h2_levels,
+          col = h2_cols,
+          pch = 16,
+          lty = 1,
+          lwd = 2,
+          cex = legend_cex,
+          ncol = legend_ncol,
+          bty = "n",
+          title = "h2"
+        )
+      }
+    }
+
+    if (layout_slots > length(h1_levels)) {
+      for (i in seq_len(layout_slots - length(h1_levels))) {
+        plot.new()
+      }
+    }
+
+    mtext(paste("Response vs rsd by h1/h2:", resp, "|", mod), outer = TRUE, cex = 1.2)
+  }
+}
+
+par(old_par)
+dev.off()
+
 # ---- output-annotation ----
 output_dictionary <- data.frame(
   file = c(
@@ -787,12 +998,18 @@ output_dictionary <- data.frame(
     "05_response_vs_rsd_observed.txt",
     "05_response_vs_rsd_predicted.txt",
     "05_response_vs_rsd.pdf",
+    "05_response_vs_rsd_h1_h2_observed.txt",
+    "05_response_vs_rsd_h1_h2_predicted.txt",
+    "05_response_vs_rsd_h1_h2.pdf",
     "06_publication_response_curve_summary_gamma.txt",
     "06_publication_response_curve_draws_gamma.txt",
     "06_publication_parameter_summary_gamma.txt",
     "RUN_SUMMARY.txt"
   ),
   models = c(
+    "gamma models only",
+    "gamma models only",
+    "gamma models only",
     "gamma models only",
     "gamma models only",
     "gamma models only",
@@ -825,6 +1042,9 @@ output_dictionary <- data.frame(
     "one row per model response observation",
     "one row per model response x-grid point",
     "plot",
+    "one row per model response observation",
+    "one row per model response h1/h2 x-grid point",
+    "plot",
     "one row per gamma model response x-grid point",
     "one row per sampled posterior draw and x-grid point",
     "one row per gamma model parameter",
@@ -841,6 +1061,9 @@ output_dictionary <- data.frame(
     "original response scale",
     "LOO on gamma response scale",
     "summed LOO on gamma response scale",
+    "original response scale",
+    "original response scale",
+    "original response scale",
     "original response scale",
     "original response scale",
     "original response scale",
@@ -863,6 +1086,9 @@ output_dictionary <- data.frame(
     "Observed points for response versus relative stand density figures.",
     "Posterior fitted response curves with 90 percent intervals.",
     "Quick base-R response versus relative stand density plot.",
+    "Observed points with h1 panel labels and h2 color labels.",
+    "Posterior fitted response curves by h1/h2, clipped to each observed h1/h2 rsd range.",
+    "Response versus relative stand density panels by h1 with h2-colored points and curves.",
     "Publication-ready gamma response curves with multiple credible intervals.",
     "Sampled gamma posterior expected curves for spaghetti or ribbon diagnostics.",
     "Publication-ready gamma parameter summaries with posterior probabilities.",
@@ -889,10 +1115,13 @@ writeLines(
     "- LOO compares hierarchical structures within the gamma distribution.",
     "- Publication curve files use posterior expected responses, not full posterior predictive yrep draws.",
     "- 06_publication_response_curve_draws_gamma.txt stores a compact draw sample for plotting, not all posterior draws.",
+    "- 05_response_vs_rsd_h1_h2.pdf uses conditional h1/h2 predictions where those grouping levels exist.",
+    "- Grouped h1/h2 prediction lines are clipped to the observed rsd range for each h1/h2 combination.",
     "",
     "Recommended publication inputs:",
     "- Main fitted-curve figure: 06_publication_response_curve_summary_gamma.txt.",
     "- Optional spaghetti curves: 06_publication_response_curve_draws_gamma.txt.",
+    "- Grouped h1/h2 diagnostic figure: 05_response_vs_rsd_h1_h2.pdf.",
     "- Gamma hierarchy ranking: 05_loo_total_ranking.txt.",
     "- Diagnostics and screening: 01_mcmc_diagnostics.txt and 03_ppcheck_observed_yrep_summary.txt.",
     "- Column and file descriptions: 00_output_dictionary.txt."

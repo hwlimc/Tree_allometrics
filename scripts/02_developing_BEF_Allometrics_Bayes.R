@@ -292,6 +292,8 @@ step1 <- run_by_model(get_mcmc)
 write_txt(step1, "01_mcmc_diagnostics.txt")
 step1[step1$divergences>1,]
 step1[step1$max_rhat>1.01,]
+### Choosing only gamma distribution passed the tests!!
+
 
 # ---- step-2-posterior ----
 get_posteriors <- function(fit, model) {
@@ -383,6 +385,28 @@ step3_summary <- do.call(
 step3_summary <- step3_summary[order(step3_summary$response, step3_summary$model), ]
 write_txt(step3_summary, "03_ppcheck_observed_yrep_summary.txt")
 step3_summary
+
+### Difference between step 2 and step 3
+#### The practical difference:
+
+##   Step      Uses posterior draws to       Main object         Main question
+##             summarize
+##  ━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━━━━━
+##   Step 2    Parameters                    b_, sd_, shape_,    What are the
+##                                           sigma_, nu_         estimated model
+##                                                               parameters?
+##  ────────  ────────────────────────────  ──────────────────  ──────────────────
+##   Step 3    Simulated data                yrep vs observed    Can the model
+##                                           y                   generate data
+##                                                               like the
+##                                                               observed data?
+
+##  In short: Step 2 checks what the model learned about the parameters; Step 3
+##  checks whether those learned parameters imply realistic data. A model can have
+##  reasonable Step 2 parameter summaries but still fail Step 3 if its predicted
+##  distributions do not match the observed BEF data well.
+
+
 
 # ---- step-3-ppcheck-density-plot ----
 plot_ppc_density_one <- function(fit, model, resp_info, ndraws = 50) {

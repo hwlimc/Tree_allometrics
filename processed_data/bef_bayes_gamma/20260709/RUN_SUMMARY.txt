@@ -1,6 +1,6 @@
 Run ID: 20260709
-Run generated at: 2026-07-09 10:46:50.601099
-Project root: /home/hlim/wrd/b/Dynamic_allometrics
+Run generated at: 2026-07-09 21:55:29.455641
+Project root: /Users/hyli0001/wrd/b/Dynamic_allometrics
 Output directory: processed_data/bef_bayes_gamma/20260709
 
 Files:
@@ -15,6 +15,9 @@ Files:
 04_observed_vs_predicted.txt
 05_loo_metrics_by_response.txt
 05_loo_total_ranking.txt
+05_response_vs_rsd_h1_h2_observed.txt
+05_response_vs_rsd_h1_h2_predicted.txt
+05_response_vs_rsd_h1_h2.pdf
 05_response_vs_rsd_observed.txt
 05_response_vs_rsd_predicted.txt
 05_response_vs_rsd.pdf
@@ -22,3 +25,4 @@ Files:
 06_publication_response_curve_draws_gamma.txt
 06_publication_response_curve_summary_gamma.txt
 README_OUTPUTS.txt
+RUN_SUMMARY.txt
