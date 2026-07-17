@@ -1,0 +1,14 @@
+split_value	n_observations	n_stands
+Pinus	414	81
+Quercus	362	71
+Larix	76	15
+Cryptomeria	63	13
+Chamaecyparis	48	12
+Liriodendron	39	8
+Carpinus	27	6
+Betula	25	5
+Populus	24	5
+Castanopsis	20	4
+Camellia	15	3
+Machilus	14	2
+Eurya	5	1

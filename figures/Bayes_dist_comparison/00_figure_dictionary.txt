@@ -1,0 +1,7 @@
+file	source_data	purpose
+01_mcmc_max_rhat_by_structure.pdf	01_mcmc_diagnostics.txt	Max Rhat by model structure and distribution; triangles mark failed MCMC screen.
+01_mcmc_divergences_by_structure.pdf	01_mcmc_diagnostics.txt	Divergence counts by model structure and distribution; triangles mark failed MCMC screen.
+02_ppcheck_rmse_by_response.pdf	02_ppcheck_observed_yrep_summary.txt	Posterior predictive RMSE by response, model structure, and distribution.
+03_loo_elpd_diff_by_structure.pdf	03_loo_distribution_comparison_by_structure.txt	Main LOO comparison: ELPD difference from the best distribution within each model structure.
+03_loo_rank_by_structure.pdf	03_loo_distribution_comparison_by_structure.txt	LOO rank of each distribution within each model structure.
+03_loo_elpd_diff_by_response.pdf	03_loo_metrics_by_response.txt	Response-level LOO ELPD difference from best distribution within each model structure and response.

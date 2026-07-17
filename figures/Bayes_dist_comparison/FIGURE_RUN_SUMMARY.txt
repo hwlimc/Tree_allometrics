@@ -1,0 +1,17 @@
+Figure run generated at: 2026-07-13 20:12:14.397888
+Project root: /Users/hyli0001/wrd/b/Dynamic_allometrics
+Source output directory: /Users/hyli0001/wrd/b/Dynamic_allometrics/processed_data/bef_bayes_dist_comparision
+Figure output directory: /Users/hyli0001/wrd/b/Dynamic_allometrics/figures/Bayes_dist_comparison
+
+Figure files:
+01_mcmc_max_rhat_by_structure.pdf
+01_mcmc_divergences_by_structure.pdf
+02_ppcheck_rmse_by_response.pdf
+03_loo_elpd_diff_by_structure.pdf
+03_loo_rank_by_structure.pdf
+03_loo_elpd_diff_by_response.pdf
+
+Figure metadata files:
+00_figure_dictionary.txt
+README_FIGURES.txt
+FIGURE_RUN_SUMMARY.txt

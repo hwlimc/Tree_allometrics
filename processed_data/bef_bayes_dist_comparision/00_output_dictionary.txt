@@ -1,0 +1,10 @@
+file	step	row_level	purpose
+00_model_manifest.txt	setup	one row per discovered model file	Input model inventory and file metadata.
+00_output_dictionary.txt	setup	one row per output file	Column and file descriptions for this distribution-comparison run.
+01_mcmc_diagnostics.txt	1	one row per model	MCMC diagnostics used to screen whether each fitted distribution sampled adequately.
+02_ppcheck_observed_yrep_pointwise.txt	2	one row per model response observation	Pointwise posterior predictive checks on the original response scale.
+02_ppcheck_observed_yrep_summary.txt	2	one row per model response	Aggregate posterior predictive check metrics by model and response.
+03_loo_metrics_by_response.txt	3	one row per model response	Response-level LOO metrics with rank and differences within each model structure and response.
+03_loo_distribution_comparison_by_structure.txt	3	one row per model, summed over responses	Main distribution comparison: LOO totals ranked within each model structure.
+README_OUTPUTS.txt	summary	text	Human-readable summary of the distribution-comparison outputs.
+RUN_SUMMARY.txt	summary	text	Run time, project path, output path, and output file listing.

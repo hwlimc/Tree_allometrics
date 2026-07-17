@@ -1,0 +1,17 @@
+Run ID: 20260713195804
+Run generated at: 2026-07-13 19:58:04.597606
+Project root: /Users/hyli0001/wrd/b/Dynamic_allometrics
+Output directory: processed_data/bef_bayes_dist_comparision
+Discovered model structures: 13
+Discovered families: gamma, lognormal, student
+Stopped after step: 3
+
+Files:
+00_model_manifest.txt
+00_output_dictionary.txt
+01_mcmc_diagnostics.txt
+02_ppcheck_observed_yrep_pointwise.txt
+02_ppcheck_observed_yrep_summary.txt
+03_loo_distribution_comparison_by_structure.txt
+03_loo_metrics_by_response.txt
+README_OUTPUTS.txt

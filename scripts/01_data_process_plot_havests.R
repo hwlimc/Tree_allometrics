@@ -206,9 +206,15 @@ bp$ftp[bp$ft1.forest_type=='mixed']<-'brd'
 bp$ftp[bp$ft1.forest_type=='mono_B']<-'brd'
 bp$ftp[bp$ft1.forest_type=='mono_N']<-'cnf'
 
+apical_strong_or_intermediate_sp <- c(
+  "BP", "CJ", "CO", "LL", "LT", "PD", "PDe", "PK", "PR", "PT", "PxT"
+)
+bp$api <- ifelse(
+  bp$sp_code %in% apical_strong_or_intermediate_sp,
+  "apdm",
+  "not"
+)
 
 write.table(bp,'processed_data/plot_biomass.txt',quote=FALSE,sep='\t',row.names=FALSE)
-
-
 
 

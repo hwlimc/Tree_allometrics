@@ -1,0 +1,9 @@
+file	source_data	purpose
+03_ppcheck_density_observed_yrep_gamma.pdf	00_model_info.txt plus model .rds files	Density posterior predictive checks from observed values and new posterior predictive draws.
+04_observed_vs_predicted.pdf	05_observed_vs_predicted.txt	Observed versus posterior fitted medians for calibration checks.
+05_residual_vs_predicted_h1_h2_befa_beft.pdf	05_observed_vs_predicted.txt	Residual versus predicted panels by h1 with befa.st and beft.st overlaid.
+05_residual_vs_rsd_h1_h2_befa_beft.pdf	05_observed_vs_predicted.txt	Residual versus relative stand density panels by h1 with befa.st and beft.st overlaid.
+05_residual_diagnostics_h1_h2_befa_beft_*.pdf	05_observed_vs_predicted.txt	One-model residual diagnostic PDFs for presentation.
+05_residual_vs_rsd_mean_h1_befa_beft.pdf	05_observed_vs_predicted.txt	Residuals from h1 observed means versus relative stand density.
+05_residual_vs_rsd_mean_h2_befa_beft.pdf	05_observed_vs_predicted.txt	Residuals from h2 observed means versus relative stand density.
+05_residual_vs_rsd_mean_h1_h2_befa_beft_*.pdf	05_observed_vs_predicted.txt	One-model residual-from-mean PDFs for presentation.
