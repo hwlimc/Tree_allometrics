@@ -652,23 +652,49 @@ draw_column <- function(draws, variable) {
 }
 
 group_eta <- function(draws, resp, parameter, h1, h2) {
-  eta <- draw_column(draws, sprintf("b_%s_%s_Intercept", resp, parameter))
+  components <- group_eta_components(draws, resp, parameter, h1, h2)
+  components$group
+}
+
+group_eta_components <- function(draws, resp, parameter, h1, h2) {
+  grand <- draw_column(draws, sprintf("b_%s_%s_Intercept", resp, parameter))
+  h1_offset <- rep(0, nrow(draws))
+  h2_offset <- rep(0, nrow(draws))
 
   if (!identical(h1, "all")) {
-    eta <- eta + draw_column(
+    h1_offset <- draw_column(
       draws,
       sprintf("r_h1__%s_%s[%s,Intercept]", resp, parameter, h1)
     )
   }
 
   if (!identical(h2, "all")) {
-    eta <- eta + draw_column(
+    h2_offset <- draw_column(
       draws,
       sprintf("r_h2__%s_%s[%s,Intercept]", resp, parameter, h2)
     )
   }
 
-  eta
+  list(
+    grand = grand,
+    h1_offset = h1_offset,
+    h2_offset = h2_offset,
+    group = grand + h1_offset + h2_offset
+  )
+}
+
+application_parameter_stats <- function(draws, resp, parameter, h1, h2, label) {
+  components <- group_eta_components(draws, resp, parameter, h1, h2)
+  c(
+    prefixed_stats(components$grand, paste0("grand_log", label)),
+    prefixed_stats(components$h1_offset, paste0("h1_log", label, "_offset")),
+    prefixed_stats(components$h2_offset, paste0("h2_log", label, "_offset")),
+    prefixed_stats(exp(components$h1_offset), paste0("h1_", label, "_multiplier")),
+    prefixed_stats(exp(components$h2_offset), paste0("h2_", label, "_multiplier")),
+    prefixed_stats(exp(components$grand), paste0("grand_", label)),
+    prefixed_stats(components$group, paste0("group_log", label)),
+    prefixed_stats(exp(components$group), paste0("group_", label))
+  )
 }
 
 response_offset <- function(resp_info) {
@@ -844,6 +870,9 @@ get_application_outputs <- function(fit, model) {
       coefficient_summaries[[k]] <- cbind(
         base,
         as.data.frame(as.list(c(
+          application_parameter_stats(draws, resp, "logL", h1, h2, "L"),
+          application_parameter_stats(draws, resp, "logA", h1, h2, "A"),
+          application_parameter_stats(draws, resp, "logk", h1, h2, "k"),
           prefixed_stats(L, "L"),
           prefixed_stats(A, "A"),
           prefixed_stats(decay_k, "k")
@@ -920,9 +949,61 @@ step6_coefficient_summary <- do.call(rbind, lapply(application_outputs, `[[`, "s
 step6_coefficient_draws <- do.call(rbind, lapply(application_outputs, `[[`, "draws"))
 step6_prediction_grid <- do.call(rbind, lapply(application_outputs, `[[`, "prediction_grid"))
 
+selected_parameter_models <- c("ftp_sp_k0_gamma", "PFT_sp_k1_gamma")
+selected_parameter_responses <- c("befa.st", "befr.st")
+
+make_selected_parameter_table <- function(summary_table) {
+  selected <- summary_table[
+    summary_table$model %in% selected_parameter_models &
+      summary_table$response %in% selected_parameter_responses,
+    , drop = FALSE
+  ]
+  rows <- list()
+  row_i <- 1L
+  first_group_row <- !duplicated(paste(selected$model, selected$response))
+
+  for (i in seq_len(nrow(selected))) {
+    model_row <- selected[i, , drop = FALSE]
+    for (parameter in c("L", "A", "k")) {
+      for (level in c("grand", "group")) {
+        if (level == "grand" && !first_group_row[[i]]) {
+          next
+        }
+        prefix <- paste0(level, "_", parameter)
+        group_name <- if (level == "grand") "population" else model_row$application_group
+        rows[[row_i]] <- data.frame(
+          model = model_row$model,
+          model_structure = model_row$model_structure,
+          hierarchy = model_row$hierarchy,
+          k_depth = model_row$k_depth,
+          response = model_row$response,
+          estimate_level = level,
+          application_group = group_name,
+          parameter = parameter,
+          mean = model_row[[paste0(prefix, "_mean")]],
+          median = model_row[[paste0(prefix, "_median")]],
+          sd = model_row[[paste0(prefix, "_sd")]],
+          q025 = model_row[[paste0(prefix, "_q025")]],
+          q05 = model_row[[paste0(prefix, "_q05")]],
+          q95 = model_row[[paste0(prefix, "_q95")]],
+          q975 = model_row[[paste0(prefix, "_q975")]],
+          stringsAsFactors = FALSE
+        )
+        row_i <- row_i + 1L
+      }
+    }
+  }
+
+  out <- do.call(rbind, rows)
+  out[order(out$model, out$response, out$estimate_level, out$application_group, out$parameter), ]
+}
+
+step6_selected_parameter_table <- make_selected_parameter_table(step6_coefficient_summary)
+
 write_txt(step6_coefficient_summary, "06_application_coefficients_summary.txt")
 write_txt(step6_coefficient_draws, "06_application_coefficient_draws.txt")
 write_txt(step6_prediction_grid, "06_application_prediction_grid.txt")
+write_txt(step6_selected_parameter_table, "06_selected_model_parameter_table.txt")
 
 # ---- output-annotation ----
 output_dictionary <- data.frame(
@@ -940,13 +1021,14 @@ output_dictionary <- data.frame(
     "06_application_coefficients_summary.txt",
     "06_application_coefficient_draws.txt",
     "06_application_prediction_grid.txt",
+    "06_selected_model_parameter_table.txt",
     "README_OUTPUTS.txt",
     "RUN_SUMMARY.txt"
   ),
   models = c(
     "gamma models only",
     "run metadata",
-    rep("gamma models only", 11),
+    rep("gamma models only", 12),
     "run metadata",
     "run metadata"
   ),
@@ -964,6 +1046,7 @@ output_dictionary <- data.frame(
     "one row per model group and fitted component response",
     "one row per sampled posterior draw, model group, and fitted component response",
     "one row per model group, response, and RSD grid value",
+    "one row per selected model, response, estimate level, group, and parameter",
     "text",
     "text"
   ),
@@ -981,6 +1064,7 @@ output_dictionary <- data.frame(
     "transformed equation coefficients",
     "transformed equation coefficients",
     "original response scale",
+    "transformed equation coefficients",
     "metadata",
     "metadata"
   ),
@@ -995,9 +1079,10 @@ output_dictionary <- data.frame(
     "Posterior summaries for population parameters, group-level standard deviations, and gamma shape parameters.",
     "Observed, conditional predicted, residual, and h1/h2 mean-residual diagnostics in one long table.",
     "Observed-versus-predicted fit summary with RMSE, MAE, residual bias, linear-fit slope/intercept, R2, and correlation.",
-    "Application-ready L, A, and k summaries after combining fixed effects with h1 and h2 group offsets.",
+    "Application-ready L, A, and k summaries, including grand estimates, h1/h2 log-scale offsets, and combined group estimates.",
     "Compact posterior draw sample of application-ready L, A, and k values for uncertainty propagation.",
     "Application-ready BEF predictions over each group's observed RSD range, with posterior credible intervals.",
+    "Grand and group-specific L, A, and k estimates for ftp_sp_k0_gamma and PFT_sp_k1_gamma, for befa.st and befr.st.",
     "Human-readable summary of numeric outputs and figure-script handoff.",
     "Run time, project path, output path, and output file listing."
   ),
@@ -1020,7 +1105,7 @@ writeLines(
     "- This script writes tabular numeric outputs and metadata only; figure scripts write PDFs.",
     "- Fitted component responses are befa.st and befr.st; beft.st is derived as befa.st + befr.st.",
     "- 04_posterior_parameter_summary.txt reports population parameters and group-level standard deviations on the model scale.",
-    "- 06_application_coefficients_summary.txt reports application-ready L, A, and k values after adding fixed and group-level effects, then exponentiating.",
+    "- 06_application_coefficients_summary.txt reports grand estimates, h1/h2 log-scale offsets, and combined group estimates for L, A, and k.",
     "- 06_application_coefficient_draws.txt stores a compact deterministic sample of posterior coefficient draws for uncertainty propagation.",
     "- 06_application_prediction_grid.txt is the simplest uncertainty table for readers: use median and q025/q975 at or interpolated to their RSD.",
     "- Coefficient uncertainty should be propagated draw-by-draw; marginal intervals for L, A, and k should not be combined by hand.",
@@ -1038,6 +1123,7 @@ writeLines(
     "",
     "Recommended publication inputs:",
     "- Main user coefficient table: 06_application_coefficients_summary.txt.",
+    "- Selected model parameter table: 06_selected_model_parameter_table.txt.",
     "- Reader uncertainty table: 06_application_prediction_grid.txt.",
     "- Advanced uncertainty propagation: 06_application_coefficient_draws.txt.",
     "- Observed fit and residual diagnostics: 05_observed_vs_predicted.txt.",

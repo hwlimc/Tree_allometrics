@@ -1,6 +1,6 @@
 BEF Bayesian gamma-only numeric outputs
 
-Generated: 2026-09-14 15:11:51.13949
+Generated: 2026-09-14 20:28:34.012614
 Run ID: 20260914
 Project root: /Users/hyli0001/wrd/b/Dynamic_allometrics
 Output directory: processed_data/bef_bayes_gamma
@@ -11,7 +11,7 @@ Scale notes:
 - This script writes tabular numeric outputs and metadata only; figure scripts write PDFs.
 - Fitted component responses are befa.st and befr.st; beft.st is derived as befa.st + befr.st.
 - 04_posterior_parameter_summary.txt reports population parameters and group-level standard deviations on the model scale.
-- 06_application_coefficients_summary.txt reports application-ready L, A, and k values after adding fixed and group-level effects, then exponentiating.
+- 06_application_coefficients_summary.txt reports grand estimates, h1/h2 log-scale offsets, and combined group estimates for L, A, and k.
 - 06_application_coefficient_draws.txt stores a compact deterministic sample of posterior coefficient draws for uncertainty propagation.
 - 06_application_prediction_grid.txt is the simplest uncertainty table for readers: use median and q025/q975 at or interpolated to their RSD.
 - Coefficient uncertainty should be propagated draw-by-draw; marginal intervals for L, A, and k should not be combined by hand.
@@ -29,6 +29,7 @@ Figure generation:
 
 Recommended publication inputs:
 - Main user coefficient table: 06_application_coefficients_summary.txt.
+- Selected model parameter table: 06_selected_model_parameter_table.txt.
 - Reader uncertainty table: 06_application_prediction_grid.txt.
 - Advanced uncertainty propagation: 06_application_coefficient_draws.txt.
 - Observed fit and residual diagnostics: 05_observed_vs_predicted.txt.

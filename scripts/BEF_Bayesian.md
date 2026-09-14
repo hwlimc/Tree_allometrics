@@ -612,8 +612,24 @@ use when applying a group-specific equation.
 The complete table is
 [06_application_coefficients_summary.txt](../processed_data/bef_bayes_gamma/06_application_coefficients_summary.txt).
 It contains one row for each model, response, and application group. The
-`L_median`, `A_median`, and `k_median` columns are point estimates; `q025` and
-`q975` columns give the 95% posterior intervals.
+`L_median`, `A_median`, and `k_median` columns are the final group-specific
+point estimates; `q025` and `q975` columns give the 95% posterior intervals.
+The table also reports `grand_L_*`, `grand_A_*`, and `grand_k_*` for the
+population-level estimates, `h1_log*_offset_*` and `h2_log*_offset_*` for the
+hierarchical deviations, and `group_logL_*`, `group_logA_*`, and `group_logk_*`
+for the combined log-scale estimate. The corresponding `group_L_*`,
+`group_A_*`, and `group_k_*` columns give the final original-scale group
+coefficients; the legacy `L_*`, `A_*`, and `k_*` columns contain the same
+final group coefficients. On the log scale the relationship is additive:
+
+```text
+group_logL = grand_logL + h1_logL_offset + h2_logL_offset
+group_logA = grand_logA + h1_logA_offset + h2_logA_offset
+group_logk = grand_logk + h1_logk_offset + h2_logk_offset
+```
+
+After exponentiation, the group-specific coefficient is the grand coefficient
+multiplied by the corresponding group multipliers.
 
 | Application group | Response | L median [95% interval] | A median [95% interval] | k median [95% interval] |
 |:--|:--|--:|--:|--:|
@@ -621,6 +637,11 @@ It contains one row for each model, response, and application group. The
 | `mono_B.BP` | `befr.st` | 0.363 [0.043, 0.498] | 0.333 [0.085, 0.748] | 1.748 [0.647, 5.355] |
 | `mono_N.CJ` | `befa.st` | 0.234 [0.185, 0.290] | 1.165 [0.714, 1.847] | 6.891 [5.438, 8.558] |
 | `mono_N.CJ` | `befr.st` | 0.178 [0.012, 0.314] | 0.363 [0.132, 0.641] | 1.748 [0.647, 5.355] |
+
+For the requested model comparison, the directly filtered long-format table
+is [06_selected_model_parameter_table.txt](../processed_data/bef_bayes_gamma/06_selected_model_parameter_table.txt).
+It contains `ftp_sp_k0_gamma` and `PFT_sp_k1_gamma`, both `befa.st` and
+`befr.st`, and separate `grand` and `group` rows for all three parameters.
 
 ## Reader prediction grid
 
@@ -806,6 +827,7 @@ The current gamma-only output directory is
 | [06_application_coefficients_summary.txt](../processed_data/bef_bayes_gamma/06_application_coefficients_summary.txt) | Application-ready group-specific `L`, `A`, and `k` summaries |
 | [06_application_coefficient_draws.txt](../processed_data/bef_bayes_gamma/06_application_coefficient_draws.txt) | Posterior coefficient draws for uncertainty propagation |
 | [06_application_prediction_grid.txt](../processed_data/bef_bayes_gamma/06_application_prediction_grid.txt) | Reader-facing predictions and 95% posterior intervals |
+| [06_selected_model_parameter_table.txt](../processed_data/bef_bayes_gamma/06_selected_model_parameter_table.txt) | Requested grand and group estimates for the two selected models and two responses |
 
 # Reproducibility
 

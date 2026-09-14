@@ -1,5 +1,5 @@
 Run ID: 20260914
-Run generated at: 2026-09-14 15:11:51.13949
+Run generated at: 2026-09-14 20:28:34.012614
 Project root: /Users/hyli0001/wrd/b/Dynamic_allometrics
 Output directory: processed_data/bef_bayes_gamma
 
@@ -17,5 +17,6 @@ Numeric files:
 06_application_coefficients_summary.txt
 06_application_coefficient_draws.txt
 06_application_prediction_grid.txt
+06_selected_model_parameter_table.txt
 README_OUTPUTS.txt
 RUN_SUMMARY.txt
