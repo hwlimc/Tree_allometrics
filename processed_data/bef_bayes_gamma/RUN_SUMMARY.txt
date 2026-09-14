@@ -1,0 +1,21 @@
+Run ID: 20260914
+Run generated at: 2026-09-14 15:11:51.13949
+Project root: /Users/hyli0001/wrd/b/Dynamic_allometrics
+Output directory: processed_data/bef_bayes_gamma
+
+Numeric files:
+00_model_info.txt
+00_output_dictionary.txt
+01_mcmc_diagnostics.txt
+02_ppcheck_obs_vs_yrep.txt
+02_ppcheck_summary.txt
+03_loo_metrics_by_response.txt
+03_loo_total_ranking.txt
+04_posterior_parameter_summary.txt
+05_observed_vs_predicted.txt
+05_observed_vs_predicted_summary.txt
+06_application_coefficients_summary.txt
+06_application_coefficient_draws.txt
+06_application_prediction_grid.txt
+README_OUTPUTS.txt
+RUN_SUMMARY.txt

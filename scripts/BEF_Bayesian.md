@@ -5,6 +5,7 @@ BEF Bayesian Workflow
 - [Inputs](#inputs)
 - [Diagnostics](#diagnostics)
 - [Posterior Summaries](#posterior-summaries)
+- [Application Outputs](#application-outputs)
 - [Posterior Predictive Checks](#posterior-predictive-checks)
 - [Model Comparison](#model-comparison)
 - [Outputs](#outputs)
@@ -586,6 +587,83 @@ knitr::kable(
 | sp_k1_student.15       | sp_k1_student       | sp_k1           | student   | nu_z1                        | 62.7812 | 59.9859 | 19.5252 | 35.9584 | 99.0548 |
 | sp_k1_student.16       | sp_k1_student       | sp_k1           | student   | nu_z2                        | 51.5792 | 49.0681 | 17.7236 | 27.4972 | 84.7478 |
 
+# Application Outputs
+
+The gamma-only numeric workflow now writes three tables for applying the
+estimated models after publication. The selected gamma model in this run is
+`ftp_sp_k0_gamma`, with FTP as the first grouping level and `ftp:sp_code` as
+the second grouping level.
+
+The fitted component equations are:
+
+```text
+befa.st = 1 + L + A * exp(-k * rsd)
+befr.st = L + A * exp(-k * rsd)
+beft.st = befa.st + befr.st
+```
+
+For each hierarchical group, `L`, `A`, and `k` are calculated from posterior
+draws by adding the population intercept and all applicable group effects on
+the log scale, then exponentiating. These are the coefficients readers should
+use when applying a group-specific equation.
+
+## Application coefficient summary
+
+The complete table is
+[06_application_coefficients_summary.txt](../processed_data/bef_bayes_gamma/06_application_coefficients_summary.txt).
+It contains one row for each model, response, and application group. The
+`L_median`, `A_median`, and `k_median` columns are point estimates; `q025` and
+`q975` columns give the 95% posterior intervals.
+
+| Application group | Response | L median [95% interval] | A median [95% interval] | k median [95% interval] |
+|:--|:--|--:|--:|--:|
+| `mono_B.BP` | `befa.st` | 0.241 [0.191, 0.308] | 0.904 [0.515, 1.543] | 6.891 [5.438, 8.558] |
+| `mono_B.BP` | `befr.st` | 0.363 [0.043, 0.498] | 0.333 [0.085, 0.748] | 1.748 [0.647, 5.355] |
+| `mono_N.CJ` | `befa.st` | 0.234 [0.185, 0.290] | 1.165 [0.714, 1.847] | 6.891 [5.438, 8.558] |
+| `mono_N.CJ` | `befr.st` | 0.178 [0.012, 0.314] | 0.363 [0.132, 0.641] | 1.748 [0.647, 5.355] |
+
+## Reader prediction grid
+
+The complete prediction table is
+[06_application_prediction_grid.txt](../processed_data/bef_bayes_gamma/06_application_prediction_grid.txt).
+Readers select the model, response, and application group, then use the row
+at their `rsd` value or interpolate between rows. `predicted_median` is the
+fitted prediction and `predicted_q025` to `predicted_q975` provide the 95%
+posterior interval.
+
+| Application group | Response | RSD | Median prediction | 95% posterior interval |
+|:--|:--|--:|--:|--:|
+| `mono_B.BP` | `befa.st` | 0.048 | 1.892 | [1.619, 2.322] |
+| `mono_B.BP` | `befa.st` | 0.096 | 1.710 | [1.539, 2.012] |
+| `mono_B.BP` | `befr.st` | 0.048 | 0.651 | [0.491, 0.898] |
+
+The prediction interval includes uncertainty in the estimated coefficients.
+For `beft.st`, the table contains predictions obtained by adding the
+component-response draws, so readers do not need to combine separate
+marginal intervals themselves.
+
+## Posterior coefficient draws
+
+The complete draw-level table is
+[06_application_coefficient_draws.txt](../processed_data/bef_bayes_gamma/06_application_coefficient_draws.txt).
+It contains a compact sample of 1,000 posterior draws for each application
+group and response. These draws are intended for advanced uncertainty
+propagation, simulation, or calculation of a derived quantity. The `L`, `A`,
+and `k` draws should be combined within the same draw; their marginal
+intervals should not be combined by hand.
+
+## Between-group standard deviations
+
+In [04_posterior_parameter_summary.txt](../processed_data/bef_bayes_gamma/04_posterior_parameter_summary.txt),
+parameters such as `sd_h1__y1m1_logL_Intercept` and
+`sd_h2__y2_logk_Intercept` are posterior estimates of the standard deviation
+of the corresponding group effects. They describe variation among groups on
+the model's log-parameter scale; they are not standard errors of the
+population parameter estimate. Each standard deviation also has posterior
+uncertainty, reported by its posterior median and interval. The
+application-specific coefficient table transforms this uncertainty into the
+original `L`, `A`, and `k` scales.
+
 # Posterior Predictive Checks
 
 The next table compares observed values with posterior predictive draws
@@ -714,24 +792,20 @@ knitr::kable(
 
 # Outputs
 
-``` r
-out_files <- sort(list.files(wf$out_dir))
-out_tbl <- data.frame(
-  file = out_files,
-  path = file.path(wf$out_dir, out_files),
-  stringsAsFactors = FALSE
-)
+The current gamma-only output directory is
+`processed_data/bef_bayes_gamma`. The main produced tables are:
 
-knitr::kable(
-  out_tbl,
-  col.names = c("File", "Path"),
-  escape = FALSE,
-  align = c("l", "l")
-)
-```
-
-| File | Path |
-|:-----|:-----|
+| File | Purpose |
+|:--|:--|
+| [00_output_dictionary.txt](../processed_data/bef_bayes_gamma/00_output_dictionary.txt) | Column definitions for all numeric outputs |
+| [01_mcmc_diagnostics.txt](../processed_data/bef_bayes_gamma/01_mcmc_diagnostics.txt) | MCMC convergence diagnostics |
+| [02_ppcheck_summary.txt](../processed_data/bef_bayes_gamma/02_ppcheck_summary.txt) | Posterior predictive summaries |
+| [03_loo_total_ranking.txt](../processed_data/bef_bayes_gamma/03_loo_total_ranking.txt) | Gamma model comparison |
+| [04_posterior_parameter_summary.txt](../processed_data/bef_bayes_gamma/04_posterior_parameter_summary.txt) | Population parameters and between-group standard deviations |
+| [05_observed_vs_predicted.txt](../processed_data/bef_bayes_gamma/05_observed_vs_predicted.txt) | Observation-level fitted values and residuals |
+| [06_application_coefficients_summary.txt](../processed_data/bef_bayes_gamma/06_application_coefficients_summary.txt) | Application-ready group-specific `L`, `A`, and `k` summaries |
+| [06_application_coefficient_draws.txt](../processed_data/bef_bayes_gamma/06_application_coefficient_draws.txt) | Posterior coefficient draws for uncertainty propagation |
+| [06_application_prediction_grid.txt](../processed_data/bef_bayes_gamma/06_application_prediction_grid.txt) | Reader-facing predictions and 95% posterior intervals |
 
 # Reproducibility
 

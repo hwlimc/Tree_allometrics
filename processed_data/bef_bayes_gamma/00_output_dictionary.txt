@@ -1,0 +1,16 @@
+file	models	row_level	response_scale	purpose
+00_model_info.txt	gamma models only	one row per model	metadata	Input gamma model inventory and file metadata.
+00_output_dictionary.txt	run metadata	one row per output file	metadata	Column and file descriptions for numeric outputs from this script.
+01_mcmc_diagnostics.txt	gamma models only	one row per model	diagnostic scale	MCMC diagnostics for screening divergent or weakly mixed gamma fits.
+02_ppcheck_obs_vs_yrep.txt	gamma models only	one row per model response observation	original response scale	Pointwise posterior predictive checks using observed values and yrep summaries.
+02_ppcheck_summary.txt	gamma models only	one row per model response	original response scale	Aggregate posterior predictive check metrics for model screening.
+03_loo_metrics_by_response.txt	gamma models only	one row per gamma model response	LOO on gamma response scale	Response-level LOO metrics for comparing gamma hierarchical structures.
+03_loo_total_ranking.txt	gamma models only	one row per gamma model	summed LOO on gamma response scale	Total LOO ranking for comparing gamma hierarchical structures.
+04_posterior_parameter_summary.txt	gamma models only	one row per model parameter	parameter scale	Posterior summaries for population parameters, group-level standard deviations, and gamma shape parameters.
+05_observed_vs_predicted.txt	gamma models only	one row per model response observation, including derived beft.st	original response scale	Observed, conditional predicted, residual, and h1/h2 mean-residual diagnostics in one long table.
+05_observed_vs_predicted_summary.txt	gamma models only	one row per model response, including derived beft.st	original response scale	Observed-versus-predicted fit summary with RMSE, MAE, residual bias, linear-fit slope/intercept, R2, and correlation.
+06_application_coefficients_summary.txt	gamma models only	one row per model group and fitted component response	transformed equation coefficients	Application-ready L, A, and k summaries after combining fixed effects with h1 and h2 group offsets.
+06_application_coefficient_draws.txt	gamma models only	one row per sampled posterior draw, model group, and fitted component response	transformed equation coefficients	Compact posterior draw sample of application-ready L, A, and k values for uncertainty propagation.
+06_application_prediction_grid.txt	gamma models only	one row per model group, response, and RSD grid value	original response scale	Application-ready BEF predictions over each group's observed RSD range, with posterior credible intervals.
+README_OUTPUTS.txt	run metadata	text	metadata	Human-readable summary of numeric outputs and figure-script handoff.
+RUN_SUMMARY.txt	run metadata	text	metadata	Run time, project path, output path, and output file listing.

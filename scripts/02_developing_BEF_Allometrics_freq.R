@@ -9,6 +9,41 @@ unique(bp$sp_code)
 unique(bp$ftp)
 unique(bp$PFT)
 
+
+plot(log(Bst)~log(d2h),bp)
+
+summary(lm(log(Bcr)~log(Baw),bp[bp$sp_code=='PD',]))
+summary(lm(log(Bcr)~log(Baw)+rsd,bp[bp$sp_code=='PD',]))
+
+summary(lm(log(Bst)~log(d),bp[bp$sp_code=='PD',]))
+summary(lm(log(Bst)~log(d)+rsd,bp[bp$sp_code=='PD',]))
+summary(lm(log(Bst)~log(d2h),bp[bp$sp_code=='PD',]))
+summary(lm(log(Bst)~log(d2h)+rsd,bp[bp$sp_code=='PD',]))
+
+summary(lm(log(Bbr)~log(d),bp[bp$sp_code=='PD',]))
+summary(lm(log(Bbr)~log(d)+rsd,bp[bp$sp_code=='PD',]))
+summary(lm(log(Bbr)~log(d2h),bp[bp$sp_code=='PD',]))
+summary(lm(log(Bbr)~log(d2h)+rsd,bp[bp$sp_code=='PD',]))
+
+summary(lm(log(Bf)~log(d),bp[bp$sp_code=='PD',]))
+summary(lm(log(Bf)~log(d)+rsd,bp[bp$sp_code=='PD',]))
+summary(lm(log(Bf)~log(d2h),bp[bp$sp_code=='PD',]))
+summary(lm(log(Bf)~log(d2h)+rsd,bp[bp$sp_code=='PD',]))
+
+summary(lm(log(Bcr)~log(d),bp[bp$sp_code=='PD',]))
+summary(lm(log(Bcr)~log(d)+rsd,bp[bp$sp_code=='PD',]))
+summary(lm(log(Bcr)~log(d2h),bp[bp$sp_code=='PD',]))
+summary(lm(log(Bcr)~log(d2h)+rsd,bp[bp$sp_code=='PD',]))
+
+
+
+plot(log(Bst)~log(d2h),bp[bp$sp_code=='PD',])
+
+
+# summary(lm(log(Bcr)~log(Bw),bp))
+# plot(log(Bcr)~log(Bw),bp)
+# points(log(Bcr)~log(Bw),bp[bp$ft1.forest_type=='mono_B',],col=2)
+# summary(lm(log(Bcr)~log(Bst),bp))
 exp_decay<- function(x, L, A, k) {
   L + A * exp(-k * x)
 }

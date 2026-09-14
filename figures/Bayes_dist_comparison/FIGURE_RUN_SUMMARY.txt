@@ -1,4 +1,4 @@
-Figure run generated at: 2026-07-13 20:12:14.397888
+Figure run generated at: 2026-09-14 12:26:22.383499
 Project root: /Users/hyli0001/wrd/b/Dynamic_allometrics
 Source output directory: /Users/hyli0001/wrd/b/Dynamic_allometrics/processed_data/bef_bayes_dist_comparision
 Figure output directory: /Users/hyli0001/wrd/b/Dynamic_allometrics/figures/Bayes_dist_comparison

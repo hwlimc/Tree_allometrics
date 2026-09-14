@@ -48,6 +48,10 @@ publication_curve_grid_n <- 100
 publication_curve_draws_n <- 200
 publication_curve_probs <- c(0.025, 0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95, 0.975)
 publication_curve_prob_names <- c("q025", "q05", "q10", "q25", "q50", "q75", "q90", "q95", "q975")
+application_coefficient_draws_n <- 1000
+application_rsd_grid_n <- 101
+application_probs <- publication_curve_probs
+application_prob_names <- publication_curve_prob_names
 model_file_pattern <- "^xp_(.+)_gamma_rsd_4-4k-99-15[.]rds$"
 
 model_structure_label <- function(structure_key) {
@@ -604,256 +608,459 @@ step5_fit_summary <- step5_fit_summary[order(step5_fit_summary$response, step5_f
 write_txt(step5_observed_fit, "05_observed_vs_predicted.txt")
 write_txt(step5_fit_summary, "05_observed_vs_predicted_summary.txt")
 
-# # # ---- step-6-publication-figure-data ----
-# # # These files are small, annotated derivatives for publication figures. They keep
-# # # posterior uncertainty needed for plotting without writing full draw matrices.
-# # best_gamma_model <- step3_total$model[[1]]
+# ---- Step 6: application-ready coefficients and uncertainty ----
+best_gamma_model <- step3_total$model[[1]]
 
-# # add_best_gamma_flag <- function(df) {
-  # # df$is_best_gamma_model <- df$model == best_gamma_model
-  # # df
-# # }
+summary_stats <- function(x) {
+  c(
+    mean = mean(x, na.rm = TRUE),
+    median = median(x, na.rm = TRUE),
+    sd = sd(x, na.rm = TRUE),
+    q025 = unname(quantile(x, 0.025, na.rm = TRUE)),
+    q05 = unname(quantile(x, 0.05, na.rm = TRUE)),
+    q95 = unname(quantile(x, 0.95, na.rm = TRUE)),
+    q975 = unname(quantile(x, 0.975, na.rm = TRUE))
+  )
+}
 
-# # get_publication_curve_summary <- function(fit, model, resp_info) {
-  # # resp <- resp_info$resp[[1]]
-  # # grid <- prediction_grid_for_fit(fit, resp_info)
+prefixed_stats <- function(x, prefix) {
+  out <- summary_stats(x)
+  names(out) <- paste(prefix, names(out), sep = "_")
+  out
+}
 
-  # # epred <- posterior_epred(
-    # # fit,
-    # # newdata = grid$newdata,
-    # # resp = resp,
-    # # re_formula = NA
-  # # )
-  # # epred <- backtransform(resp_info, epred)
+draw_ids <- function(draws) {
+  if (".draw" %in% names(draws)) {
+    return(draws$.draw)
+  }
+  seq_len(nrow(draws))
+}
 
-  # # q <- t(apply(epred, 2, quantile, probs = publication_curve_probs, na.rm = TRUE))
-  # # colnames(q) <- paste0("pred_", publication_curve_prob_names)
+application_draw_rows <- function(draws, n_draws = application_coefficient_draws_n) {
+  n_available <- nrow(draws)
+  if (is.null(n_draws) || is.na(n_draws) || n_draws >= n_available) {
+    return(seq_len(n_available))
+  }
+  unique(pmax(1L, pmin(n_available, round(seq(1, n_available, length.out = n_draws)))))
+}
 
-  # # add_model(data.frame(
-    # # response = resp_label(resp_info),
-    # # x = grid$x_grid,
-    # # predicted_mean = colMeans(epred, na.rm = TRUE),
-    # # predicted_median = apply(epred, 2, median, na.rm = TRUE),
-    # # predicted_sd = apply(epred, 2, sd, na.rm = TRUE),
-    # # q,
-    # # stringsAsFactors = FALSE
-  # # ), model)
-# # }
+draw_column <- function(draws, variable) {
+  if (variable %in% names(draws)) {
+    return(draws[[variable]])
+  }
+  rep(0, nrow(draws))
+}
 
-# # get_publication_curve_draws <- function(fit, model, resp_info) {
-  # # resp <- resp_info$resp[[1]]
-  # # grid <- prediction_grid_for_fit(fit, resp_info)
+group_eta <- function(draws, resp, parameter, h1, h2) {
+  eta <- draw_column(draws, sprintf("b_%s_%s_Intercept", resp, parameter))
 
-  # # epred <- posterior_epred(
-    # # fit,
-    # # newdata = grid$newdata,
-    # # resp = resp,
-    # # re_formula = NA,
-    # # ndraws = publication_curve_draws_n
-  # # )
-  # # epred <- backtransform(resp_info, epred)
+  if (!identical(h1, "all")) {
+    eta <- eta + draw_column(
+      draws,
+      sprintf("r_h1__%s_%s[%s,Intercept]", resp, parameter, h1)
+    )
+  }
 
-  # # add_model(data.frame(
-    # # response = resp_label(resp_info),
-    # # draw_id = rep(seq_len(nrow(epred)), each = length(grid$x_grid)),
-    # # x = rep(grid$x_grid, times = nrow(epred)),
-    # # predicted = as.vector(t(epred)),
-    # # stringsAsFactors = FALSE
-  # # ), model)
-# # }
+  if (!identical(h2, "all")) {
+    eta <- eta + draw_column(
+      draws,
+      sprintf("r_h2__%s_%s[%s,Intercept]", resp, parameter, h2)
+    )
+  }
 
-# # get_publication_parameter_summary <- function(fit, model) {
-  # # draws <- as_draws_df(fit)
-  # # variables <- names(draws)
-  # # variables <- variables[grepl("^(b_|sd_|shape_)", variables)]
+  eta
+}
 
-  # # out <- do.call(rbind, lapply(variables, function(variable) {
-    # # x <- draws[[variable]]
-    # # data.frame(
-      # # variable = variable,
-      # # mean = mean(x, na.rm = TRUE),
-      # # median = median(x, na.rm = TRUE),
-      # # sd = sd(x, na.rm = TRUE),
-      # # q025 = unname(quantile(x, 0.025, na.rm = TRUE)),
-      # # q05 = unname(quantile(x, 0.05, na.rm = TRUE)),
-      # # q95 = unname(quantile(x, 0.95, na.rm = TRUE)),
-      # # q975 = unname(quantile(x, 0.975, na.rm = TRUE)),
-      # # prob_gt_0 = mean(x > 0, na.rm = TRUE),
-      # # prob_lt_0 = mean(x < 0, na.rm = TRUE),
-      # # stringsAsFactors = FALSE
-    # # )
-  # # }))
+response_offset <- function(resp_info) {
+  switch(
+    resp_info$transform[[1]],
+    shift_y1m1 = 1,
+    identity = 0,
+    stop("Unknown response transform: ", resp_info$transform[[1]])
+  )
+}
 
-  # # add_model(out, model)
-# # }
+groups_for_fit <- function(fit) {
+  dat <- fit$data
 
-# # step6_curve_summary <- do.call(
-  # # rbind,
-  # # lapply(seq_along(fits), function(i) {
-    # # resp_info <- response_info_for_fit(fits[[i]])
-    # # do.call(rbind, lapply(seq_len(nrow(resp_info)), function(j) {
-      # # get_publication_curve_summary(fits[[i]], model_info$model[[i]], resp_info[j, , drop = FALSE])
-    # # }))
-  # # })
-# # )
-# # step6_curve_summary <- add_best_gamma_flag(step6_curve_summary)
-# # write_txt(step6_curve_summary, "06_publication_response_curve_summary_gamma.txt")
+  if ("h2" %in% names(dat)) {
+    groups <- unique(data.frame(
+      h1 = as.character(dat$h1),
+      h2 = as.character(dat$h2),
+      stringsAsFactors = FALSE
+    ))
+    groups <- groups[complete.cases(groups), , drop = FALSE]
+    return(groups[order(groups$h1, groups$h2), , drop = FALSE])
+  }
 
-# # step6_curve_draws <- do.call(
-  # # rbind,
-  # # lapply(seq_along(fits), function(i) {
-    # # resp_info <- response_info_for_fit(fits[[i]])
-    # # do.call(rbind, lapply(seq_len(nrow(resp_info)), function(j) {
-      # # get_publication_curve_draws(fits[[i]], model_info$model[[i]], resp_info[j, , drop = FALSE])
-    # # }))
-  # # })
-# # )
-# # step6_curve_draws <- add_best_gamma_flag(step6_curve_draws)
-# # write_txt(step6_curve_draws, "06_publication_response_curve_draws_gamma.txt")
+  if ("h1" %in% names(dat)) {
+    groups <- unique(data.frame(
+      h1 = as.character(dat$h1),
+      h2 = "all",
+      stringsAsFactors = FALSE
+    ))
+    groups <- groups[complete.cases(groups), , drop = FALSE]
+    return(groups[order(groups$h1), , drop = FALSE])
+  }
 
-# # step6_parameter_summary <- do.call(
-  # # rbind,
-  # # lapply(seq_along(fits), function(i) {
-    # # get_publication_parameter_summary(fits[[i]], model_info$model[[i]])
-  # # })
-# # )
-# # step6_parameter_summary <- add_best_gamma_flag(step6_parameter_summary)
-# # write_txt(step6_parameter_summary, "06_publication_parameter_summary_gamma.txt")
+  data.frame(h1 = "all", h2 = "all", stringsAsFactors = FALSE)
+}
 
-# # # ---- output-annotation ----
-# # output_dictionary <- data.frame(
-  # # file = c(
-    # # "00_model_manifest.txt",
-    # # "00_output_dictionary.txt",
-    # # "01_mcmc_diagnostics.txt",
-    # # "02.1_ppcheck_obs_vs_yrep.txt",
-    # # "02.2_ppcheck_summary.txt",
-    # # "03.1_loo_metrics_by_response.txt",
-    # # "03.2_loo_total_ranking.txt",
-    # # "04_posterior_parameter_summary.txt",
-    # # "05.1_observed_fit_diagnostics_h1_h2.txt",
-    # # "05.2_observed_fit_summary.txt",
-    # # "06_publication_response_curve_summary_gamma.txt",
-    # # "06_publication_response_curve_draws_gamma.txt",
-    # # "06_publication_parameter_summary_gamma.txt",
-    # # "README_OUTPUTS.txt",
-    # # "RUN_SUMMARY.txt"
-  # # ),
-  # # models = c(
-    # # "gamma models only",
-    # # "run metadata",
-    # # rep("gamma models only", 11),
-    # # "run metadata",
-    # # "run metadata"
-  # # ),
-  # # row_level = c(
-    # # "one row per model",
-    # # "one row per output file",
-    # # "one row per model",
-    # # "one row per model response observation",
-    # # "one row per model response",
-    # # "one row per gamma model response",
-    # # "one row per gamma model",
-    # # "one row per model parameter",
-    # # "one row per model response observation",
-    # # "one row per model response",
-    # # "one row per gamma model response x-grid point",
-    # # "one row per sampled posterior draw and x-grid point",
-    # # "one row per gamma model parameter",
-    # # "text",
-    # # "text"
-  # # ),
-  # # response_scale = c(
-    # # "metadata",
-    # # "metadata",
-    # # "diagnostic scale",
-    # # "original response scale",
-    # # "original response scale",
-    # # "LOO on gamma response scale",
-    # # "summed LOO on gamma response scale",
-    # # "parameter scale",
-    # # "original response scale",
-    # # "original response scale",
-    # # "original response scale",
-    # # "original response scale",
-    # # "parameter scale",
-    # # "metadata",
-    # # "metadata"
-  # # ),
-  # # purpose = c(
-    # # "Input gamma model inventory and file metadata.",
-    # # "Column and file descriptions for numeric outputs from this script.",
-    # # "MCMC diagnostics for screening divergent or weakly mixed gamma fits.",
-    # # "Pointwise posterior predictive checks using observed values and yrep summaries.",
-    # # "Aggregate posterior predictive check metrics for model screening.",
-    # # "Response-level LOO metrics for comparing gamma hierarchical structures.",
-    # # "Total LOO ranking for comparing gamma hierarchical structures.",
-    # # "Posterior summaries for population, group SD, and gamma shape parameters.",
-    # # "Observed, conditional predicted, residual, and h1/h2 mean-residual diagnostics in one long table.",
-    # # "Observed-versus-predicted fit summary with RMSE, MAE, residual bias, linear-fit slope/intercept, R2, and correlation.",
-    # # "Publication-ready gamma response curves with multiple credible intervals.",
-    # # "Sampled gamma posterior expected curves for spaghetti or ribbon diagnostics.",
-    # # "Publication-ready gamma parameter summaries with posterior probabilities.",
-    # # "Human-readable summary of numeric outputs and figure-script handoff.",
-    # # "Run time, project path, output path, and output file listing."
-  # # ),
-  # # stringsAsFactors = FALSE
-# # )
-# # write_txt(output_dictionary, "00_output_dictionary.txt")
+group_rows <- function(dat, h1, h2) {
+  keep <- rep(TRUE, nrow(dat))
+  if (!identical(h1, "all") && "h1" %in% names(dat)) {
+    keep <- keep & as.character(dat$h1) == h1
+  }
+  if (!identical(h2, "all") && "h2" %in% names(dat)) {
+    keep <- keep & as.character(dat$h2) == h2
+  }
+  keep
+}
 
-# # writeLines(
-  # # c(
-    # # "BEF Bayesian gamma-only numeric outputs",
-    # # "",
-    # # paste("Generated:", run_generated_at),
-    # # paste("Run ID:", run_id),
-    # # paste("Project root:", project_root),
-    # # paste("Output directory:", out_dir),
-    # # paste("Discovered gamma models:", paste(model_info$model, collapse = ", ")),
-    # # paste("Best gamma model:", best_gamma_model),
-    # # "",
-    # # "Scale notes:",
-    # # "- This script writes tabular numeric outputs and metadata only; it does not write PDFs.",
-    # # "- Figure-ready datasets are on the original response scale: befa.st, befr.st, and derived beft.st.",
-    # # "- 05.1_observed_fit_diagnostics_h1_h2.txt keeps observed, predicted, residual, and h1/h2 mean-residual values in one long table.",
-    # # "- 05.2_observed_fit_summary.txt summarizes observed-vs-predicted fit with RMSE, MAE, bias, linear-fit R2, slope, intercept, and correlation.",
-    # # "- Figure scripts can overlay befa.st and beft.st in the same h1 panels; befr.st is retained in tables as the component used to compute beft.st.",
-    # # "- LOO compares hierarchical structures within the gamma distribution.",
-    # # "- Publication curve files use posterior expected responses, not full posterior predictive yrep draws.",
-    # # "- 06_publication_response_curve_draws_gamma.txt stores a compact draw sample for plotting, not all posterior draws.",
-    # # "- Mean-baseline residual columns use observed group means, not posterior predictions: residual = observed - mean(observed).",
-    # # "",
-    # # "Figure generation:",
-    # # "- Render PDFs with: Rscript scripts/03_plot_BEF_Bayes_gamma_figures.R <output directory>",
-    # # "- If <output directory> is omitted, the figure script uses the latest processed_data/bef_bayes_gamma run.",
-    # # "- The PPC density figure is generated by the figure script from model .rds files listed in 00_model_manifest.txt.",
-    # # "- Figure file descriptions are written by the figure script to 00_figure_dictionary.txt.",
-    # # "",
-    # # "Recommended publication inputs:",
-    # # "- Main fitted-curve data: 06_publication_response_curve_summary_gamma.txt.",
-    # # "- Optional spaghetti curve data: 06_publication_response_curve_draws_gamma.txt.",
-    # # "- Observed fit and residual diagnostics: 05.1_observed_fit_diagnostics_h1_h2.txt.",
-    # # "- Observed fit summary: 05.2_observed_fit_summary.txt.",
-    # # "- Gamma hierarchy ranking: 03.2_loo_total_ranking.txt.",
-    # # "- Parameter summaries: 04_posterior_parameter_summary.txt.",
-    # # "- Diagnostics and screening: 01_mcmc_diagnostics.txt and 02.2_ppcheck_summary.txt.",
-    # # "- Column and file descriptions: 00_output_dictionary.txt."
-  # # ),
-  # # file.path(out_dir, "README_OUTPUTS.txt")
-# # )
+rsd_grid_for_group <- function(fit, h1, h2, resp = NULL, require_both = FALSE) {
+  dat <- fit$data
+  keep <- group_rows(dat, h1, h2) & is.finite(dat$x)
 
-# # # ---- run-summary ----
-# # writeLines(
-  # # c(
-    # # paste("Run ID:", run_id),
-    # # paste("Run generated at:", run_generated_at),
-    # # paste("Project root:", project_root),
-    # # paste("Output directory:", out_dir),
-    # # "",
-    # # "Numeric files:",
-    # # output_dictionary$file
-  # # ),
-  # # file.path(out_dir, "RUN_SUMMARY.txt")
-# # )
+  if (!is.null(resp)) {
+    keep <- keep & !is.na(dat[[resp]])
+  }
+  if (require_both) {
+    keep <- keep & !is.na(dat$y1m1) & !is.na(dat$y2)
+  }
 
-# # out_dir
+  x <- dat$x[keep]
+  if (length(x) == 0 || all(is.na(x))) {
+    x <- dat$x[is.finite(dat$x)]
+  }
+
+  x_min <- min(x, na.rm = TRUE)
+  x_max <- max(x, na.rm = TRUE)
+
+  if (!is.finite(x_min) || !is.finite(x_max)) {
+    stop("Cannot make RSD grid because x range is not finite.")
+  }
+
+  if (isTRUE(all.equal(x_min, x_max))) {
+    return(x_min)
+  }
+
+  seq(x_min, x_max, length.out = application_rsd_grid_n)
+}
+
+suffix_after_dot <- function(x) {
+  sub("^[^.]+[.]", "", x)
+}
+
+add_application_group_columns <- function(df) {
+  df$ftp <- NA_character_
+  df$PFT <- NA_character_
+  df$sp_code <- NA_character_
+
+  ftp_rows <- df$hierarchy %in% c("ftp", "ftp_sp")
+  pft_rows <- df$hierarchy %in% c("PFT", "PFT_sp")
+  sp_rows <- df$hierarchy == "sp"
+  nested_sp_rows <- df$hierarchy %in% c("ftp_sp", "PFT_sp")
+
+  df$ftp[ftp_rows] <- df$h1[ftp_rows]
+  df$PFT[pft_rows] <- df$h1[pft_rows]
+  df$sp_code[sp_rows] <- df$h1[sp_rows]
+  df$sp_code[nested_sp_rows] <- suffix_after_dot(df$h2[nested_sp_rows])
+
+  df$application_group <- ifelse(
+    df$hierarchy == "base",
+    "population",
+    ifelse(df$h2 == "all", df$h1, df$h2)
+  )
+  df$is_best_gamma_model <- df$model == best_gamma_model
+  df
+}
+
+application_base <- function(model, h1, h2, response, response_offset_value = NA_real_) {
+  add_application_group_columns(add_model(data.frame(
+    response = response,
+    response_offset = response_offset_value,
+    h1 = h1,
+    h2 = h2,
+    stringsAsFactors = FALSE
+  ), model))
+}
+
+prediction_summary <- function(model,
+                               h1,
+                               h2,
+                               response,
+                               x_grid,
+                               prediction_fun,
+                               response_offset_value = NA_real_) {
+  stat_matrix <- t(vapply(
+    x_grid,
+    function(x) summary_stats(prediction_fun(x)),
+    numeric(length(summary_stats(1)))
+  ))
+  colnames(stat_matrix) <- paste("predicted", names(summary_stats(1)), sep = "_")
+
+  base <- application_base(model, h1, h2, response, response_offset_value)
+  base <- base[rep(1, length(x_grid)), , drop = FALSE]
+  cbind(
+    base,
+    data.frame(rsd = x_grid, stat_matrix, row.names = NULL, check.names = FALSE)
+  )
+}
+
+get_application_outputs <- function(fit, model) {
+  draws <- as_draws_df(fit)
+  selected_draw_rows <- application_draw_rows(draws)
+  selected_draw_ids <- draw_ids(draws)[selected_draw_rows]
+  resp_info <- response_info_for_fit(fit)
+  groups <- groups_for_fit(fit)
+
+  coefficient_summaries <- list()
+  coefficient_draws <- list()
+  prediction_grids <- list()
+  k <- 1L
+
+  for (group_i in seq_len(nrow(groups))) {
+    h1 <- groups$h1[[group_i]]
+    h2 <- groups$h2[[group_i]]
+    coefficients_by_response <- list()
+
+    for (resp_i in seq_len(nrow(resp_info))) {
+      resp <- resp_info$resp[[resp_i]]
+      response_name <- resp_info$response[[resp_i]]
+      offset <- response_offset(resp_info[resp_i, , drop = FALSE])
+
+      L <- exp(group_eta(draws, resp, "logL", h1, h2))
+      A <- exp(group_eta(draws, resp, "logA", h1, h2))
+      decay_k <- exp(group_eta(draws, resp, "logk", h1, h2))
+
+      coefficients_by_response[[response_name]] <- list(
+        L = L,
+        A = A,
+        k = decay_k,
+        offset = offset
+      )
+
+      base <- application_base(model, h1, h2, response_name, offset)
+      coefficient_summaries[[k]] <- cbind(
+        base,
+        as.data.frame(as.list(c(
+          prefixed_stats(L, "L"),
+          prefixed_stats(A, "A"),
+          prefixed_stats(decay_k, "k")
+        )), check.names = FALSE),
+        equation = paste0(
+          response_name,
+          " = ",
+          if (offset == 0) "" else paste0(offset, " + "),
+          "L + A * exp(-k * rsd)"
+        ),
+        row.names = NULL
+      )
+
+      base_draws <- base[rep(1, length(selected_draw_rows)), , drop = FALSE]
+      coefficient_draws[[k]] <- cbind(
+        base_draws,
+        data.frame(
+          draw_id = selected_draw_ids,
+          L = L[selected_draw_rows],
+          A = A[selected_draw_rows],
+          k = decay_k[selected_draw_rows],
+          stringsAsFactors = FALSE
+        )
+      )
+
+      x_grid <- rsd_grid_for_group(fit, h1, h2, resp = resp)
+      prediction_grids[[k]] <- prediction_summary(
+        model,
+        h1,
+        h2,
+        response_name,
+        x_grid,
+        function(x) offset + L + A * exp(-decay_k * x),
+        response_offset_value = offset
+      )
+
+      k <- k + 1L
+    }
+
+    if (all(c("befa.st", "befr.st") %in% names(coefficients_by_response))) {
+      befa <- coefficients_by_response[["befa.st"]]
+      befr <- coefficients_by_response[["befr.st"]]
+      x_grid <- rsd_grid_for_group(fit, h1, h2, require_both = TRUE)
+
+      prediction_grids[[k]] <- prediction_summary(
+        model,
+        h1,
+        h2,
+        total_response_name,
+        x_grid,
+        function(x) {
+          befa$offset + befa$L + befa$A * exp(-befa$k * x) +
+            befr$offset + befr$L + befr$A * exp(-befr$k * x)
+        },
+        response_offset_value = NA_real_
+      )
+
+      k <- k + 1L
+    }
+  }
+
+  list(
+    summary = do.call(rbind, coefficient_summaries),
+    draws = do.call(rbind, coefficient_draws),
+    prediction_grid = do.call(rbind, prediction_grids)
+  )
+}
+
+application_outputs <- lapply(seq_along(fits), function(i) {
+  get_application_outputs(fits[[i]], model_info$model[[i]])
+})
+
+step6_coefficient_summary <- do.call(rbind, lapply(application_outputs, `[[`, "summary"))
+step6_coefficient_draws <- do.call(rbind, lapply(application_outputs, `[[`, "draws"))
+step6_prediction_grid <- do.call(rbind, lapply(application_outputs, `[[`, "prediction_grid"))
+
+write_txt(step6_coefficient_summary, "06_application_coefficients_summary.txt")
+write_txt(step6_coefficient_draws, "06_application_coefficient_draws.txt")
+write_txt(step6_prediction_grid, "06_application_prediction_grid.txt")
+
+# ---- output-annotation ----
+output_dictionary <- data.frame(
+  file = c(
+    "00_model_info.txt",
+    "00_output_dictionary.txt",
+    "01_mcmc_diagnostics.txt",
+    "02_ppcheck_obs_vs_yrep.txt",
+    "02_ppcheck_summary.txt",
+    "03_loo_metrics_by_response.txt",
+    "03_loo_total_ranking.txt",
+    "04_posterior_parameter_summary.txt",
+    "05_observed_vs_predicted.txt",
+    "05_observed_vs_predicted_summary.txt",
+    "06_application_coefficients_summary.txt",
+    "06_application_coefficient_draws.txt",
+    "06_application_prediction_grid.txt",
+    "README_OUTPUTS.txt",
+    "RUN_SUMMARY.txt"
+  ),
+  models = c(
+    "gamma models only",
+    "run metadata",
+    rep("gamma models only", 11),
+    "run metadata",
+    "run metadata"
+  ),
+  row_level = c(
+    "one row per model",
+    "one row per output file",
+    "one row per model",
+    "one row per model response observation",
+    "one row per model response",
+    "one row per gamma model response",
+    "one row per gamma model",
+    "one row per model parameter",
+    "one row per model response observation, including derived beft.st",
+    "one row per model response, including derived beft.st",
+    "one row per model group and fitted component response",
+    "one row per sampled posterior draw, model group, and fitted component response",
+    "one row per model group, response, and RSD grid value",
+    "text",
+    "text"
+  ),
+  response_scale = c(
+    "metadata",
+    "metadata",
+    "diagnostic scale",
+    "original response scale",
+    "original response scale",
+    "LOO on gamma response scale",
+    "summed LOO on gamma response scale",
+    "parameter scale",
+    "original response scale",
+    "original response scale",
+    "transformed equation coefficients",
+    "transformed equation coefficients",
+    "original response scale",
+    "metadata",
+    "metadata"
+  ),
+  purpose = c(
+    "Input gamma model inventory and file metadata.",
+    "Column and file descriptions for numeric outputs from this script.",
+    "MCMC diagnostics for screening divergent or weakly mixed gamma fits.",
+    "Pointwise posterior predictive checks using observed values and yrep summaries.",
+    "Aggregate posterior predictive check metrics for model screening.",
+    "Response-level LOO metrics for comparing gamma hierarchical structures.",
+    "Total LOO ranking for comparing gamma hierarchical structures.",
+    "Posterior summaries for population parameters, group-level standard deviations, and gamma shape parameters.",
+    "Observed, conditional predicted, residual, and h1/h2 mean-residual diagnostics in one long table.",
+    "Observed-versus-predicted fit summary with RMSE, MAE, residual bias, linear-fit slope/intercept, R2, and correlation.",
+    "Application-ready L, A, and k summaries after combining fixed effects with h1 and h2 group offsets.",
+    "Compact posterior draw sample of application-ready L, A, and k values for uncertainty propagation.",
+    "Application-ready BEF predictions over each group's observed RSD range, with posterior credible intervals.",
+    "Human-readable summary of numeric outputs and figure-script handoff.",
+    "Run time, project path, output path, and output file listing."
+  ),
+  stringsAsFactors = FALSE
+)
+write_txt(output_dictionary, "00_output_dictionary.txt")
+
+writeLines(
+  c(
+    "BEF Bayesian gamma-only numeric outputs",
+    "",
+    paste("Generated:", run_generated_at),
+    paste("Run ID:", run_id),
+    paste("Project root:", project_root),
+    paste("Output directory:", out_dir),
+    paste("Discovered gamma models:", paste(model_info$model, collapse = ", ")),
+    paste("Best gamma model:", best_gamma_model),
+    "",
+    "Scale notes:",
+    "- This script writes tabular numeric outputs and metadata only; figure scripts write PDFs.",
+    "- Fitted component responses are befa.st and befr.st; beft.st is derived as befa.st + befr.st.",
+    "- 04_posterior_parameter_summary.txt reports population parameters and group-level standard deviations on the model scale.",
+    "- 06_application_coefficients_summary.txt reports application-ready L, A, and k values after adding fixed and group-level effects, then exponentiating.",
+    "- 06_application_coefficient_draws.txt stores a compact deterministic sample of posterior coefficient draws for uncertainty propagation.",
+    "- 06_application_prediction_grid.txt is the simplest uncertainty table for readers: use median and q025/q975 at or interpolated to their RSD.",
+    "- Coefficient uncertainty should be propagated draw-by-draw; marginal intervals for L, A, and k should not be combined by hand.",
+    "",
+    "Application equations:",
+    "- befa.st = 1 + L + A * exp(-k * rsd).",
+    "- befr.st = L + A * exp(-k * rsd).",
+    "- beft.st = befa.st + befr.st.",
+    "",
+    "Figure generation:",
+    "- Render PDFs with: Rscript scripts/03_plot_BEF_Bayes_gamma_figures.R <output directory>",
+    "- If <output directory> is omitted, the figure script uses processed_data/bef_bayes_gamma.",
+    "- The PPC density figure is generated by the figure script from model .rds files listed in 00_model_info.txt.",
+    "- Figure file descriptions are written by the figure script to 00_figure_dictionary.txt.",
+    "",
+    "Recommended publication inputs:",
+    "- Main user coefficient table: 06_application_coefficients_summary.txt.",
+    "- Reader uncertainty table: 06_application_prediction_grid.txt.",
+    "- Advanced uncertainty propagation: 06_application_coefficient_draws.txt.",
+    "- Observed fit and residual diagnostics: 05_observed_vs_predicted.txt.",
+    "- Observed fit summary: 05_observed_vs_predicted_summary.txt.",
+    "- Gamma hierarchy ranking: 03_loo_total_ranking.txt.",
+    "- Model-scale parameter summaries: 04_posterior_parameter_summary.txt.",
+    "- Diagnostics and screening: 01_mcmc_diagnostics.txt and 02_ppcheck_summary.txt.",
+    "- Column and file descriptions: 00_output_dictionary.txt."
+  ),
+  file.path(out_dir, "README_OUTPUTS.txt")
+)
+
+writeLines(
+  c(
+    paste("Run ID:", run_id),
+    paste("Run generated at:", run_generated_at),
+    paste("Project root:", project_root),
+    paste("Output directory:", out_dir),
+    "",
+    "Numeric files:",
+    output_dictionary$file
+  ),
+  file.path(out_dir, "RUN_SUMMARY.txt")
+)
+
+out_dir

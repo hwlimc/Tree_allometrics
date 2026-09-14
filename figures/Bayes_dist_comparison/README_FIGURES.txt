@@ -1,6 +1,6 @@
 BEF Bayesian distribution-comparison figure outputs
 
-Generated: 2026-07-13 20:12:14.396592
+Generated: 2026-09-14 12:26:22.346426
 Source output directory: /Users/hyli0001/wrd/b/Dynamic_allometrics/processed_data/bef_bayes_dist_comparision
 Figure output directory: /Users/hyli0001/wrd/b/Dynamic_allometrics/figures/Bayes_dist_comparison
 
