@@ -3,7 +3,10 @@ getwd()
 setwd('/Users/hyli0001/wrd/b/Dynamic_allometrics/')
 # system('ls -alt ../processed_data')
 bp<-readRDS('processed_data/plot_biomass.rds')
+bp$dat_typ<-'hvst'
 nfi_h<-readRDS('processed_data/nfi_harvested_sp.rds')
+nfi_h$dat_typ<-'nfi'
+
 bp$sdi.ha<-2.4711*bp$sdi
 bp$sdi_max.ha<-2.4711*bp$sdi_max
 nfi_h$sdi.ha<-2.4711*nfi_h$sdi
@@ -11,15 +14,11 @@ bp[bp$sdi.ha>2000,]
 ## The number of spcies
 sum(!is.na(unique(bp$sp_code)))
 
-hist(nfi_h[nfi_h$sp_code=='CJ'&is.finite(nfi_h$sdi),'sdi.ha'],breaks=100)
-nfi_h[nfi_h$sp_code=='CJ'&is.finite(nfi_h$sdi)&nfi_h$sdi.ha<10,]
 
 
-## sdi.ha distribution
-
-bp$dat_typ<-'hvst'
-nfi_h$dat_typ<-'nfi'
-
+########################
+### SDI per ha #########
+########################
 quartz(w=8.0,h=5.2)
 par(mfrow=c(2,1))
 par(lwd=.3)
@@ -56,7 +55,7 @@ sdi_max<-unique(df_h$sdi_max.ha)
 # data points
 points(sdi.ha~x,df[df$dat_typ=='nfi',],xlim=c(-1,3),lwd=0.25,cex=0.3,col=8)
 points(sdi.ha~x,df[df$dat_typ=='hvst',],xlim=c(-1,3),lwd=0.25,cex=0.3,pch=21,bg=8)
-
+mtext(unique(df_h$species),1,at=n,cex=0.5)
 # boxplots
 boxplot(df$sdi.ha,at=n,add=TRUE,boxwex=0.75,outline=FALSE,axes=FALSE,col=0,border="black",lwd=1)
 
@@ -109,6 +108,7 @@ sdi_max<-unique(df_h$sdi_max.ha)
 # data points
 points(sdi.ha~x,df[df$dat_typ=='nfi',],xlim=c(-1,3),lwd=0.25,cex=0.3,col=8)
 points(sdi.ha~x,df[df$dat_typ=='hvst',],xlim=c(-1,3),lwd=0.25,cex=0.3,pch=21,bg=8)
+mtext(unique(df_h$species),1,at=n,cex=0.3)
 
 # boxplots
 boxplot(df$sdi.ha,at=n,add=TRUE,boxwex=0.75,outline=FALSE,axes=FALSE,col=0,border="black",lwd=1)
@@ -131,78 +131,119 @@ n <- n+1
 
 
 
+
+#################
+### BEF #########
+#################
+
 ## Gamma distribution : shape=mean^2/var; rate=mean/var; scale=var/mean; Dispersal=var/mean^2
 
-quartz(w=4.5,h=2.55)
-par(mfrow=c(1,4))
-par(lwd=.1,col=0)
-par(mai=c(.35,0,.2,.0))
-plot(NA,xlab="",ylab="",yaxt="n",xaxt="n",xlim=c(0,10),ylim=c(-.2,9.15))
-# ,ylim=c(.5,8.35)
-x.label<-unique(smg[,c('spe','rev.ord')])
-x.label<-x.label[order(-x.label$rev.ord),]
-x.label$ful.nm<-c('Pinus sylvestris','Pinus taeda','Eucalyptus grandis','Pseudotsuga menziesii','Populus tremula × tremuloides','Betula pendula','Bruguiera gymnorrhiza','Picea abies','Broad-leaved deciduous')
+quartz(w=8.0,h=5.2)
+par(mfrow=c(2,1))
+par(lwd=.3)
+par(mai=c(.4,.5,.4,.1))
+plot(NA, xlim=c(0.5,8.5),ylim=c(0,4),xaxt='n',yaxt='n',xlab='',ylab='')
+for (i in c('cnf')){
+	n <- 1
+	fml<-unique(bp[bp$ftp==i,'Family'])
+	fml<-fml[order(fml)]
+	for (j in fml){
+		gns<-unique(bp[bp$ftp==i&bp$Family==j,'Genus'])
+		gns<-gns[order(gns)]
+		for (k in gns){
+			spc<-unique(bp[bp$ftp==i&bp$Family==j&bp$Genus==k,'sp_code'])
+			spc<-spc[order(spc)]
+			for (l in spc){
+				df<-bp[bp$sp_code==l,]
+df<-df[is.finite(df$befa.st),]
+df$x<-runif(length(df$befa.st),min=-0.1,max=0.1)+n
+y.m<-mean(df$befa.st)
+y.sd<-sd(df$befa.st)
+y.lim<-range(df$befa.st)
+y.n<-length(df$befa.st)
 
-par(lwd=.1,col=1)
-mtext(x.label$ful.nm[1:8],las=2,2,at=(x.label$rev.ord[1:8])-0.1,line=-8.5,font=3,cex=6/12)
-mtext(x.label$ful.nm[9],las=2,2,at=(x.label$rev.ord[9])-0.1,line=-8.5,font=c(1),cex=6/12)
-mtext('Average',las=2,2,at=-0.25,line=-8,font=c(1),cex=6/12)
+y.grid<-seq(y.lim[1],y.lim[2],length.out=250)
+y.prop.dist<-dnorm(y.grid,y.m,y.sd)
+y.norm<-y.prop.dist/(max(y.prop.dist)*5)
 
-for (i in c(6:9)){
-	lnb<-rbind(lnd[1,],lnd[lnd$rev.ord%in%i,])
-	lnb[1,]<-NA
-legend(yjust=1.25,3,i,x.intersp=.4,y.intersp=.85,lnb$st,cex=7/12,pch=21,col=lnb$col,pt.bg=lnb$bg,box.col=0,pt.lwd=ifelse(lnb$sp==1,.2,.7),horiz=TRUE,text.width=1)
-}
-for (i in c(3:5)){
-	lnb<-rbind(lnd[1:3,],lnd[lnd$rev.ord%in%i,])
-lnb[1:3,]<-NA
-legend(yjust=1.25,3,i,x.intersp=.4,y.intersp=.85,lnb$st,cex=7/12,pch=21,col=lnb$col,pt.bg=lnb$bg,box.col=0,pt.lwd=ifelse(lnb$sp==1,.2,.7),horiz=TRUE,text.width=1)
-}
+# data points
+points(befa.st~x,df,xlim=c(-1,3),lwd=0.25,cex=0.3,pch=21,bg=8)
 
-for (i in c(1)){
-	lnb<-rbind(lnd[1:3,],lnd[lnd$rev.ord%in%i,])
-lnb[1:3,]<-NA
-legend(yjust=1.25,3,i,x.intersp=.4,y.intersp=.85,lnb$st,cex=7/12,pch=21,col=lnb$col,pt.bg=lnb$bg,box.col=0,pt.lwd=ifelse(lnb$sp==1,.2,.7),horiz=TRUE,text.width=1)
-}
+### Boxplot
+boxplot(df$befa.st,at=n,add=TRUE,boxwex=0.75,outline=FALSE,axes=FALSE,col=0,border="black",lwd=1)
 
-for (i in c(2)){
-lnb<-lnd[lnd$rev.ord%in%i,][1:7,]
-legend(yjust=1.2,-.3,i,x.intersp=.4,y.intersp=.85,lnb$st,cex=7/12,pch=21,col=lnb$col,pt.bg=lnb$bg,box.col=0,pt.lwd=ifelse(lnb$sp==1,.2,.7),horiz=TRUE,text.width=.8)
-}
+# ### Gamma distribution
+# y <- df$befa.st-1
+# if(length(y) > 2 && length(unique(y)) > 1){
+	# g.fit <- MASS::fitdistr(y, "gamma")
+	# g.shape <- g.fit$estimate["shape"]
+	# g.rate  <- g.fit$estimate["rate"]
+
+	# y.grid <- seq(min(y),max(y),	length.out=250)
+	# y.gamma <- dgamma(y.grid,shape=g.shape,rate=g.rate)
+	# y.norm <- y.gamma / max(y.gamma) * 0.20
+
+	# lines(n+y.norm, y.grid+1)
+	# lines(n-y.norm, y.grid+1)}
+n <- n+1
+}}}}
 
 
 par(lwd=.3)
-par(mai=c(.35,.02,.2,.02))
-plot(NA,xlab="",ylab="",xaxt="n",yaxt="n",xlim=c(0,0.9),ylim=c(-.2,9.25))
-points((jitter(rev.ord,.5)-0.5)~brtr,smg,lwd=0.04,cex=2/12,bg='white',pch=21,col=ifelse(smg$sp==1,bg,col))
-mtext('a',line=-1,adj=0.9,font=2,cex=8/12)
-axis (1,seq(-4,4,by=0.5),tck=.02,label=TRUE,mgp=c(0,-.2,0),cex.axis=9.5/12,lwd=0.3)
-mtext(expression(paste('∆'[B],' (y'^-1,')')),1,line=.9,font=1,cex=7/12)
+par(mai=c(.4,.5,.4,.1))
+plot(NA, xlim=c(0.5,14.5),ylim=c(0,4),xaxt='n',yaxt='n',xlab='',ylab='')
+for (i in c('brd')){
+	n <- 1
+	fml<-unique(bp[bp$ftp==i,'Family'])
+	fml<-fml[order(fml)]
+	for (j in fml){
+		gns<-unique(bp[bp$ftp==i&bp$Family==j,'Genus'])
+		gns<-gns[order(gns)]
+		for (k in gns){
+			spc<-unique(bp[bp$ftp==i&bp$Family==j&bp$Genus==k,'sp_code'])
+			spc<-spc[order(spc)]
+			for (l in spc){
+				df<-bp[bp$sp_code==l,]
+df<-df[is.finite(df$befa.st),]
+df$x<-runif(length(df$befa.st),min=-0.1,max=0.1)+n
+y.m<-mean(df$befa.st)
+y.sd<-sd(df$befa.st)
+y.lim<-range(df$befa.st)
+y.n<-length(df$befa.st)
 
-for (i in 1:2){
-	df<-smg[smg$sp==i,]
-	for (j in 1:length(unique(df$site))){
-	dff<-df[df$site==unique(df$site)[j],]
-	x<-dff$brtr[dff$brtr>=0]
-	x.mean<-mean(x,na.rm=TRUE)
-	x.var<-var(x,na.rm=TRUE)
-	xn<-min(x,na.rm=TRUE)
-	xm<-max(x,na.rm=TRUE)
-	xl<-length(!is.na(x))
-	x.01<-range(x,na.rm=TRUE)
-	shape<-x.mean^2/x.var
-	rate<-x.mean/x.var
-	col<-ifelse(i==1,dff$bg,dff$col)
-	y.mx<-max(dgamma(seq(0.01,2,0.001),shape,rate))*1.85
-	y.mn<-unique(dff$rev.ord)
-curve(dgamma(x,shape,rate)/y.mx+(y.mn-.4),col=col,lwd=dff$lwd,lty=dff$lty,xlim=x.01,add=TRUE)
-	# print(unique(dff[,c('site','sp')]))
-	# print(gamma_test(x))
-}}
+y.grid<-seq(y.lim[1],y.lim[2],length.out=250)
+y.prop.dist<-dnorm(y.grid,y.m,y.sd)
+y.norm<-y.prop.dist/(max(y.prop.dist)*5)
 
-	for (i in 1:nrow(smm)){
-		lines(c(-1,1)*smm$brtr.sd[i]+smm$brtr.m[i],rep(smm$rev.ord[i],2)-.5)}
-	points((rev.ord-.5)~brtr.m,smm,bg=bg,pch=21,col=col,cex=7/12,lwd=ifelse(smm$sp==1,.2,.7))
+# data points
+points(befa.st~x,df,xlim=c(-1,3),lwd=0.25,cex=0.3,pch=21,bg=8)
+
+### Boxplot
+boxplot(df$befa.st,at=n,add=TRUE,boxwex=0.75,outline=FALSE,axes=FALSE,col=0,border="black",lwd=1)
+
+# ### Gamma distribution
+# y <- df$befa.st-1
+# if(length(y) > 2 && length(unique(y)) > 1){
+	# g.fit <- MASS::fitdistr(y, "gamma")
+	# g.shape <- g.fit$estimate["shape"]
+	# g.rate  <- g.fit$estimate["rate"]
+
+	# y.grid <- seq(min(y),max(y),	length.out=250)
+	# y.gamma <- dgamma(y.grid,shape=g.shape,rate=g.rate)
+	# y.norm <- y.gamma / max(y.gamma) * 0.20
+
+	# lines(n+y.norm, y.grid+1)
+	# lines(n-y.norm, y.grid+1)}
+
+n <- n+1
+}}}}
+
+
+
+
+
+
+
 
 
 
