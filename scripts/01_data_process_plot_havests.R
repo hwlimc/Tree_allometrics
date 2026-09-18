@@ -115,9 +115,8 @@ ts.std$sdi<-SDI(ts.std$std,ts.std$m.d*100,1.605)
 ts.std$sdi.1<-SDI(ts.std$sp_std.1,ts.std$sp_m.d.1*100,1.605)
 ts.std$sdi.2<-SDI(ts.std$sp_std.2,ts.std$sp_m.d.2*100,1.605)
 ts.std$sdi.3<-SDI(ts.std$sp_std.3,ts.std$sp_m.d.3*100,1.605)
-
-write.table(ts.std,'processed_data/stand_structure.txt',quote=FALSE,sep='\t',row.names=FALSE)
-
+ts.std$sp_code<-factor(ts.std$sp_code, levels=pft_h$sp_code)
+saveRDS(ts.std,'processed_data/stand_structure.rds')
 
 #################################
 ###### Analyzing NFI data ######
@@ -131,21 +130,26 @@ nfi$sp.bef[nfi$sp.dom=='편백']<-'편백나무'
 nfi$sp.bef[nfi$sp.dom=='사시나무']<-'현사시나무'
 nfi$sp.bef[nfi$sp.dom=='소나무']<-'중부지방소나무'
 nfi$sp.bef[nfi$admin.1%in%c('강원도','강원특별자치도')&nfi$sp.dom=='소나무']<-'강원지방소나무'
+nfi[nfi$canopydensity=="",]
+nfi$cnp_d[nfi$canopydensity==""]<-NA
+nfi$cnp_d[nfi$canopydensity=="0-25%"]<-1
+nfi$cnp_d[nfi$canopydensity=="26-50%"]<-2
+nfi$cnp_d[nfi$canopydensity=="51-75%"]<-3
+nfi$cnp_d[nfi$canopydensity=="76-100%"]<-4
+
 pft_h$수종[is.na(match(pft_h$수종,unique(nfi$sp.bef)))]
-nfi[nfi$sp.dom=='상수리나무',]
-pft_h[pft_h$수종=='상수리',]
 
+nfi_h<-merge(nfi[is.finite(nfi$ba.ha)&is.finite(nfi$std.ha)&nfi$sp.bef%in%c(pft_h$수종)&nfi$foresttype1!="혼효림(M)",],pft_h,by.x='sp.bef',by.y='수종',all.x=TRUE)
 
-nfi_h<-merge(nfi[nfi$sp.bef%in%c(pft_h$수종),],pft_h,by.x='sp.bef',by.y='수종',all.x=TRUE)
 nfi_h$d.qm<-sqrt((((nfi_h$ba.ha)/nfi_h$std.ha)/pi)*4)
 nfi_h$sdi<-SDI(nfi_h$std.ha,nfi_h$d.qm*100,1.605)
 
-head(nfi_h)
-
-est_sdi_max<-function(df, group = "sp_code", sdi = "sdi", q = 0.99) {
+est_sdi_max<-function(df, group = "sp_code", sdi = "sdi", q = 0.95) {
   tapply(df[[sdi]], df[[group]], quantile, probs = q, na.rm = TRUE)
 }
 sdi_max_sp.nfi <- est_sdi_max(nfi_h, group = "sp_code", sdi = "sdi", q = 0.99)
+
+saveRDS(nfi_h,'processed_data/nfi_harvested_sp.rds')
 
 
 #################################
@@ -205,7 +209,7 @@ bp$ftp<-bp$ft1.forest_type
 bp$ftp[bp$ft1.forest_type=='mixed']<-'brd'
 bp$ftp[bp$ft1.forest_type=='mono_B']<-'brd'
 bp$ftp[bp$ft1.forest_type=='mono_N']<-'cnf'
-
+bp$ftp<-factor(bp$ftp, levels=c('cnf','brd'))
 apical_strong_or_intermediate_sp <- c(
   "BP", "CJ", "CO", "LL", "LT", "PD", "PDe", "PK", "PR", "PT", "PxT"
 )
@@ -215,6 +219,6 @@ bp$api <- ifelse(
   "not"
 )
 
-write.table(bp,'processed_data/plot_biomass.txt',quote=FALSE,sep='\t',row.names=FALSE)
+saveRDS(bp,'processed_data/plot_biomass.rds')
 
 

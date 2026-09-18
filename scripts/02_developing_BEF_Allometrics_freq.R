@@ -1,14 +1,13 @@
 getwd()
 setwd('/Users/hyli0001/wrd/b/Dynamic_allometrics/')
 # system('ls -alt ../processed_data')
-bp<-read.table('processed_data/plot_biomass.txt',sep='\t',head=TRUE)
+bp<-readRDS('processed_data/plot_biomass.rds')
 
 ## The number of spcies
 sum(!is.na(unique(bp$sp_code)))
 unique(bp$sp_code)
 unique(bp$ftp)
 unique(bp$PFT)
-
 
 plot(log(Bst)~log(d2h),bp)
 
@@ -36,8 +35,8 @@ summary(lm(log(Bcr)~log(d2h),bp[bp$sp_code=='PD',]))
 summary(lm(log(Bcr)~log(d2h)+rsd,bp[bp$sp_code=='PD',]))
 
 
-
-plot(log(Bst)~log(d2h),bp[bp$sp_code=='PD',])
+i<-22
+plot(befa.st~rsd,bp[bp$sp_code==unique(bp$sp_code)[i],],main=unique(bp$sp_code)[i])
 
 
 # summary(lm(log(Bcr)~log(Bw),bp))
