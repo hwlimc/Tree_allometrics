@@ -221,4 +221,5 @@ bp$api <- ifelse(
 
 saveRDS(bp,'processed_data/plot_biomass.rds')
 
-
+bp_bayes<-bp[,c('stand_id','sp_code','plot','age','d','h','Bst','Bbr','Bf','Bcr','Vst','Vst.5','ba','befa.v','befa.st','beft.v','befr.st','beft.st','bwd','PFT','Genus','Family','ftp','ft1.forest_type','ft1.dominant_prop','sdi','sdi.1','sdi.2','sdi.3','sdi_max','rsd','rsd.1','rsd.2','api')]
+saveRDS(bp_bayes,'processed_data/plot_biomass_bayes.rds')

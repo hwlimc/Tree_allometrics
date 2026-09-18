@@ -130,42 +130,6 @@ n <- n+1
 
 
 
-	
-unique(bp$Family)
-unique(bp$Genus)
-unique(bp$sp_code)
-
-for (i in 1:22){
-	df<-nfi_h[nfi_h$d.qm>0.001&nfi_h$sp_code==unique(nfi_h$sp_code)[i],]
-	
-	
-	
-
-y<-df$sdi[is.finite(df$sdi)]
-y.m<-mean(y)
-y.sd<-sd(y)
-y.lim<-range(y)
-y.n<-length(y)
-
-x<-runif(y.n,min=-0.1,max=0.1)
-y.grid<-seq(y.lim[1],y.lim[2],length.out=250)
-y.prop.dist<-dnorm(y.grid,y.m,y.sd)
-y.norm<-y.prop.dist/(max(y.prop.dist)*5)
-
-df_h<-bp[bp$sp_code==unique(nfi_h$sp_code)[12],]
-y_h<-df_h$sdi[is.finite(df_h$sdi)]
-x_h<-runif(length(y_h),min=-0.1,max=0.1)
-
-plot(x,y,xlim=c(-1,3),col=8,lwd=0.1,cex=0.3)
-points(x_h,y_h,xlim=c(-1,3),lwd=0.25,cex=0.3,pch=21,bg=8)
-lines(y.norm,y.grid)
-lines(-y.norm,y.grid)
-
-
-head(dnorm(y.grid,y.m,y.sd))
-norm.density<-dnorm(y_grid, sdi.m, sdi.sd)/max(dnorm(y_grid, sdi.m, sdi.sd))
-
-plot(y_grid, norm.density,ylim=c(0,1),xlim=c(0,800))
 
 ## Gamma distribution : shape=mean^2/var; rate=mean/var; scale=var/mean; Dispersal=var/mean^2
 

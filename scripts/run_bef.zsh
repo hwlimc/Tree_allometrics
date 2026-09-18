@@ -10,13 +10,13 @@ unsetopt BG_NICE 2>/dev/null || true
 # student/tdis, or gaussian/normal/ndis.
 #
 # Combined model:
-# ./run_bef.zsh . processed_data/plot_biomass.txt "PFT,sp_code" 4 4 4000 0.99 15 rsd exp_decay 1 gamma FALSE none all TRUE
+# ./run_bef.zsh . processed_data/plot_biomass_bayes.rds "PFT,sp_code" 4 4 4000 0.99 15 rsd exp_decay 1 gamma FALSE none all TRUE
 #
 # Separate species models:
-# ./run_bef.zsh . processed_data/plot_biomass.txt none 4 4 4000 0.99 15 rsd exp_decay 0 gamma FALSE sp_code all TRUE
+# ./run_bef.zsh . processed_data/plot_biomass_bayes.rds none 4 4 4000 0.99 15 rsd exp_decay 0 gamma FALSE sp_code all TRUE
 
 WD=${1:-$(pwd)}
-DATA_FILE=${2:-processed_data/plot_biomass.txt}
+DATA_FILE=${2:-processed_data/plot_biomass_bayes.rds}
 HIERARCHY=${3:-PFT,sp_code}
 CHAINS=${4:-4}
 CORES=${5:-4}
